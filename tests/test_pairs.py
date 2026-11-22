@@ -96,3 +96,22 @@ def test_pair_list_shows_different_combinations():
     count = lambda ps: sum((p.neg.smiles == "S") + (p.pos.smiles == "S") for p in ps)
     assert count(all_) > 2 and count(div) <= 2
     assert len({(p.neg.smiles, p.pos.smiles) for p in div}) == len(div) >= 4
+
+
+def test_sulfonated_quinones_get_their_hydroquinone_partner():
+    assert "O=S(=O)(O)c1ccc2c(O)c3ccccc3c(O)c2c1" in M.reduced_forms("O=C1c2ccccc2C(=O)c2cc(S(=O)(=O)O)ccc21")
+    assert "O=S(=O)(O)c1cc(O)c(O)c(S(=O)(=O)O)c1" in M.reduced_forms("O=C1C(=O)C(S(=O)(=O)O)=CC(S(=O)(=O)O)=C1")
+
+
+def test_proton_shifts_between_heteroatoms_keep_the_carbon_hydrogens():
+    # alloxazine reduced forms: protons on different ring nitrogens, same C-H count
+    a, b = "O=c1[nH]c2c(c(=O)[nH]1)Nc1ccccc1N2", "O=C1NC(=O)C2=C(N1)Nc1ccccc1N2"
+    assert M.carbon_h(a) == M.carbon_h(b)
+    # keto-enol: a hydrogen moves onto a carbon
+    assert M.carbon_h("Oc1ccc(O)cc1") != M.carbon_h("O=C1CCC(=O)C=C1")
+
+
+def test_ionised_molecules_do_not_use_esol():
+    d = M.descriptors("O=C1c2ccc(S(=O)(=O)O)cc2C(=O)c2cc(S(=O)(=O)O)ccc21")
+    assert d["ionised"] and d["sol"] >= M.IONISED_SOL_M
+    assert not M.descriptors("O=C1C=CC(=O)C=C1")["ionised"]

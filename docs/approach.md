@@ -119,9 +119,14 @@ option) size a complete system for the power and duration chosen in the sidebar.
    `E = −(E[MH₂] − E[M] − E[H₂]) / 2F + offset`. The offset is fixed by one
    measured couple, p-benzoquinone / hydroquinone at 0.6992 V. Stated
    uncertainty: ±0.3 V.
-3. **Tautomers.** If a lower-energy tautomer of the reduced form exists, the
-   couple is marked not reversible.
-4. **Descriptors.** Solubility (ESOL), synthetic difficulty (SA score, 1–10),
+3. **Tautomers.** If a lower-energy tautomer of the reduced form puts a hydrogen
+   onto a carbon (keto–enol type), the couple is marked not reversible. If it
+   only moves protons between N and O atoms (fast in water), the stable form is
+   used and the couple stays reversible. Sulfonic and phosphonic acid groups are
+   set aside while the hydrogenated partner's bonds are rebuilt.
+4. **Descriptors.** Solubility (ESOL; 1 mol/L assumed for sulfonic and
+   phosphonic acids, which are ionised in water and outside ESOL's range),
+   synthetic difficulty (SA score, 1–10),
    Michael-addition sites, aldehydes, PubChem novelty.
 5. **Stability alerts.** A molecule is unusable if it carries a group that
    breaks down in water or on its own:
@@ -255,7 +260,22 @@ sets how many of the top-ranked couples get the full sizing of section 5.
   input.
 - The molecule price fit reproduces every anchor within ×4 and all but one
   within its ×3 range (methyl viologen sells at about 3 USD/kg; the fit gives 9).
-- `tests/` (48 tests) checks the physics, the cost arithmetic, the stability
+- **Known flow-battery molecules** (`scripts/benchmark_known.py`, full output in
+  [benchmark_known.md](benchmark_known.md)):
+  - xTB voltages against measured values at pH 0: mean absolute error 0.061 V
+    over five molecules (o-benzoquinone, methyl-p-benzoquinone,
+    1,4-naphthoquinone, AQS, AQDS; largest error −0.144 V for naphthoquinone),
+    well inside the stated ±0.3 V.
+  - The published AQS | BQDS pair (Yang et al. 2014) beats 98 % of the pairs in
+    the search library; AQS is the best negative and AQDS is in the top 10 %.
+  - Alkaline molecules (2,6-DHAQ, alloxazine) rank low, as expected: the model
+    covers acid cells only.
+  - The benchmark first found three blind spots, now fixed: sulfonic-acid
+    molecules failed outright (the bond rebuild crashed on hypervalent sulfur);
+    fast proton shifts between N and O atoms were wrongly called "not
+    reversible" (alloxazine, flavins); ESOL gave ionised molecules a solubility
+    1000 times too low (AQDS: 1 mM instead of > 1 M).
+- `tests/` (51 tests) checks the physics, the cost arithmetic, the stability
   alerts, the pair logic and the explanations.
 
 ## 13. Limits: what the results cannot tell you yet
@@ -272,6 +292,10 @@ sets how many of the top-ranked couples get the full sizing of section 5.
   found in the literature), and the electricity the pumps use is not counted.
 - **Stability alerts are pattern-based.** They catch known unstable groups, not
   every decomposition path.
+- **Acid cells only.** Molecules built for alkaline batteries (DHAQ,
+  alloxazine with ferrocyanide) are judged at pH 0, where they look poor.
+- **Solubility of ionised molecules is assumed** (1 mol/L for sulfonic and
+  phosphonic acids), because ESOL does not apply to them.
 - The Materials Project generator, Pourbaix stability and machine-learned
   kinetics are planned, not done (see README, "Next").
 

@@ -163,8 +163,48 @@ def canonical(smiles: str) -> str | None:
     return Chem.MolToSmiles(m) if m is not None else None
 
 
+# Groups that take no part in the hydrogen uptake but have bonds the bond-order
+# re-derivation (DetermineBondOrders) cannot handle (hypervalent S and P). They
+# are swapped for a tagged chlorine while the conjugated system is rebuilt and
+# put back afterwards. Sulfonic and phosphonic acids are how most aqueous
+# flow-battery molecules are made soluble (AQDS, AQS, BQDS).
+PROTECTED = [(Chem.MolFromSmarts(q), sub, iso) for q, sub, iso in (
+    ("[SX4](=O)(=O)[OX2H1]", "S(=O)(=O)O", 101),
+    ("[SX4](=O)(=O)[NX3H2]", "S(=O)(=O)N", 102),
+    ("[PX4](=O)([OX2H1])[OX2H1]", "P(=O)(O)O", 103),
+)]
+
+
+def _protect(smiles: str) -> str:
+    m = Chem.MolFromSmiles(smiles)
+    for q, _, iso in PROTECTED:
+        while True:
+            hit = m.GetSubstructMatch(q)
+            if not hit:
+                break
+            rw = Chem.RWMol(m)
+            rw.GetAtomWithIdx(hit[0]).SetAtomicNum(17)
+            rw.GetAtomWithIdx(hit[0]).SetIsotope(iso)
+            rw.GetAtomWithIdx(hit[0]).SetNoImplicit(False)
+            for idx in sorted(hit[1:], reverse=True):
+                rw.RemoveAtom(idx)
+            m = rw.GetMol()
+            Chem.SanitizeMol(m)
+    return Chem.MolToSmiles(m)
+
+
+def _restore(smiles: str) -> str:
+    s = smiles
+    for _, sub, iso in PROTECTED:
+        s = s.replace(f"[{iso}Cl]", sub)
+    return canonical(s) or s
+
+
 def reduced_forms(smiles: str, limit: int = 12) -> list[str]:
     """All closed-shell MH2 partners formed by adding H to two heteroatoms."""
+    if any(smiles and Chem.MolFromSmiles(smiles) is not None
+           and Chem.MolFromSmiles(smiles).HasSubstructMatch(q) for q, _, _ in PROTECTED):
+        return sorted({_restore(r) for r in reduced_forms(_protect(smiles), limit)})
     m = Chem.MolFromSmiles(smiles)
     if m is None:
         return []
@@ -202,6 +242,18 @@ def reduced_forms(smiles: str, limit: int = 12) -> list[str]:
     return sorted(out)
 
 
+# ESOL is fitted on neutral organic molecules. Sulfonic and phosphonic acids are
+# fully ionised in water and dissolve far better: ESOL gives AQDS ~1 mM, while
+# it dissolves above 1 M at pH 0 (Er et al., Chem. Sci. 6 (2015) 885). For these
+# molecules the solubility is an assumption, IONISED_SOL_M, not an ESOL value.
+IONISED = [Chem.MolFromSmarts(x) for x in ("[SX4](=O)(=O)[OX2H1,OX1-]", "[PX4](=O)([OX2H1,OX1-])[OX2H1,OX1-]")]
+IONISED_SOL_M = 1.0
+
+
+def ionised(m) -> bool:
+    return any(m.HasSubstructMatch(q) for q in IONISED)
+
+
 def descriptors(smiles: str) -> dict:
     m = Chem.MolFromSmiles(smiles)
     mw = Descriptors.MolWt(m)
@@ -210,7 +262,10 @@ def descriptors(smiles: str) -> dict:
     heavy = m.GetNumHeavyAtoms()
     ap = sum(a.GetIsAromatic() for a in m.GetAtoms()) / heavy if heavy else 0
     log_s = 0.16 - 0.63 * logp - 0.0062 * mw + 0.066 * rb - 0.74 * ap
-    return {"mw": mw, "log_s": log_s, "sol": 10 ** log_s, "sa": sascorer.calculateScore(m),
+    ion = ionised(m)
+    if ion:
+        log_s = max(log_s, math.log10(IONISED_SOL_M))
+    return {"mw": mw, "log_s": log_s, "sol": 10 ** log_s, "sa": sascorer.calculateScore(m), "ionised": ion,
             "usd_kg": synthesis.estimate(smiles).usd_kg,
             "michael": len(m.GetSubstructMatches(MICHAEL)), "heavy": heavy,
             "aldehyde": len(m.GetSubstructMatches(ALDEHYDE)),
@@ -279,6 +334,15 @@ def lowest_tautomer(smiles: str) -> tuple[str, float]:
     return best
 
 
+def carbon_h(smiles: str) -> int:
+    """Hydrogens on carbon atoms. Two tautomers with the same count differ only
+    by protons moved between N, O and S atoms: in water that exchange takes
+    microseconds and is reversible. A change in this count means a hydrogen
+    moved onto or off a carbon (keto-enol type): slow, and the couple drifts."""
+    m = Chem.MolFromSmiles(smiles)
+    return sum(a.GetTotalNumHs() for a in m.GetAtoms() if a.GetSymbol() == "C") if m else -1
+
+
 def raw_voltage(smiles: str) -> tuple[float, str, list[str]]:
     """Most positive uncalibrated voltage over all MH2 partners, the partner,
     and notes. The H2 adduct that forms first is the direct partner; if a
@@ -289,7 +353,10 @@ def raw_voltage(smiles: str) -> tuple[float, str, list[str]]:
     m_low, e_m_low = lowest_tautomer(smiles)
     e_m = energy(smiles)
     if e_m - e_m_low > TAUTOMER_EV:
-        notes.append(f"oxidised form tautomerises to {m_low} ({e_m - e_m_low:.2f} eV lower)")
+        if carbon_h(m_low) == carbon_h(smiles):
+            e_m = e_m_low                    # fast proton shift: the stable form is the real one
+        else:
+            notes.append(f"oxidised form tautomerises to {m_low} ({e_m - e_m_low:.2f} eV lower)")
     e_h2 = energy("[H][H]")
     best = (-math.inf, "", [])
     for r in reduced_forms(smiles):
@@ -298,8 +365,10 @@ def raw_voltage(smiles: str) -> tuple[float, str, list[str]]:
             r_low, e_low = lowest_tautomer(r)
         except Exception:
             continue
-        v = -(e_r - e_m - e_h2) * EV_TO_V_2E
         n = []
+        if e_r - e_low > TAUTOMER_EV and carbon_h(r_low) == carbon_h(r):
+            r, e_r = r_low, e_low            # protons settle on other N/O atoms: same couple, reversible
+        v = -(e_r - e_m - e_h2) * EV_TO_V_2E
         if e_r - e_low > TAUTOMER_EV:
             n.append(f"reduced form tautomerises to {r_low} ({e_r - e_low:.2f} eV lower): not reversible")
             v = -(e_low - e_m_low - e_h2) * EV_TO_V_2E
@@ -366,7 +435,9 @@ def further_steps(form: str, max_more: int) -> tuple[list[float], list[str], lis
             except Exception:
                 continue
             if e - e_low > TAUTOMER_EV:
-                continue                      # this product would leave the couple
+                if carbon_h(low) != carbon_h(c):
+                    continue                  # this product would leave the couple
+                c, e = low, e_low             # fast proton shift: use the stable form
             if best is None or e < best[1]:
                 best = (c, e)
         if best is None:
@@ -401,6 +472,9 @@ def evaluate(smiles: str, check_pubchem: bool = False, max_h2: int = MAX_H2) -> 
         return r
     d = descriptors(s)
     r.mw, r.log_s, r.solubility_mol_l, r.sa, r.michael_sites = d["mw"], d["log_s"], d["sol"], d["sa"], d["michael"]
+    if d["ionised"]:
+        r.notes.append(f"solubility assumed {IONISED_SOL_M:g} M: sulfonic/phosphonic acid groups are ionised in water, "
+                       "where the ESOL estimate does not apply (AQDS measured > 1 M)")
     try:
         raw, red, tnotes = raw_voltage(s)
         r.notes += tnotes
