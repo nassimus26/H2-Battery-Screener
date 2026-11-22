@@ -80,7 +80,8 @@ def air_cell(cells: list[CellReaction], medium: str = "acid") -> CellReaction | 
 
 
 def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None,
-              fixed=None, w_comp_v=0.0, rng=None, recharge=None, liquid=False) -> Config | None:
+              fixed=None, w_comp_v=0.0, rng=None, recharge=None, liquid=False,
+              other_gas=None) -> Config | None:
     """Scan current density; return the lowest-LCOS feasible Config. With
     rng, also the efficiency band and the build-cost band (capex_band)."""
     u = t["use"]
@@ -91,6 +92,11 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
         v_ch_max = 3.0          # the electrolyser runs off board, no water-window limit
     if getattr(cell, "v_ch_max", None):
         v_ch_max = cell.v_ch_max
+    elif cell.gas_terms().get("O2", 0) > 0 and mode == "electric":
+        # The cell keeps the oxygen it makes: oxygen evolution is the charge
+        # reaction, not a side reaction, so the cell may charge like a water
+        # electrolyser.
+        v_ch_max = max(v_ch_max, ELECTROLYSER_V_MAX)
     params = estimate.cell_params(cell, t_k, p_lo, p_hi, t)
     if i0_neg is not None:
         params["i0_neg"] = i0_neg
@@ -100,7 +106,7 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
         params["ilim"] = Value(math.sqrt(b[0] * b[1]) * frac, b[0] * frac, b[1] * frac, "physics",
                                "O2 from air (Henry's law x partial pressure)", log=True)
     best, model, ocv = _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_comp_v,
-                             recharge, liquid, v_ch_max)
+                             recharge, liquid, v_ch_max, other_gas)
     if best is None or rng is None:
         return best
     xs = model.sample(rng, 200)
@@ -126,12 +132,13 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
     for i0p, i0n in zip(params["i0_pos"].sample(rng, COST_DRAWS), params["i0_neg"].sample(rng, COST_DRAWS)):
         q = dict(params, i0_pos=_fixed(params["i0_pos"], i0p), i0_neg=_fixed(params["i0_neg"], i0n))
         c, _, _ = _scan(cell, t, mode, p_lo, p_hi, q, store_approx, needs_pt, fixed, w_comp_v, recharge, liquid,
-                        v_ch_max)
+                        v_ch_max, other_gas)
         costs.append(c.capex_usd_kwh if c is not None else math.inf)
     best.capex_band = cost_band(costs)
     return best
 
 
+ELECTROLYSER_V_MAX = 2.0   # V per cell: PEM water electrolysers run at 1.7-2.0 V (IRENA, Green hydrogen cost reduction, 2020)
 COST_DRAWS = 32     # reaction-speed draws for the build-cost range
 
 
@@ -149,9 +156,12 @@ def cost_band(costs) -> tuple[float, float, float]:
     return q(0.1), q(0.5), q(0.9)
 
 
-def _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_comp_v, recharge, liquid, v_ch_max):
+def _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_comp_v, recharge, liquid, v_ch_max,
+          other_gas=None):
     """Lowest-LCOS Config over the current-density grid for these cell inputs
-    (nominal values), with the model and the OCV curve it used."""
+    (nominal values), with the model and the OCV curve it used. other_gas(gas,
+    moles) -> (kg, litres, USD) sizes the vessel of every stored gas besides
+    hydrogen (sealed cells keep both gases)."""
     u, d, sm = t["use"], t["design"], t["system"]
     t_k = u["temperature_c"] + 273.15
     model = CellModel(cell, t_k, p_lo, p_hi, params, fixed_fugacity=fixed or {})
@@ -184,6 +194,13 @@ def _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_com
             return None, model, ocv
         mass, vol, capex = st.mass_kg, st.volume_l / 1000, st.capex_usd
         parts = {"hydrogen storage": st.capex_usd}
+        if other_gas is not None:
+            for g, nu in cell.gas_terms().items():
+                if g == "H2" or nu == 0 or not realgas.fluid(g):
+                    continue
+                kg_, l_, usd_ = other_gas(g, abs(n_rxn * nu))
+                mass, vol, capex = mass + kg_, vol + l_ / 1000, capex + usd_
+                parts[f"{g} storage"] = usd_
         synth: list = []
         if mode == "electric":                 # first fill of a sealed cell
             fill = st.h2_inventory_mol * M_H2 * d["h2_usd_kg"]
@@ -246,16 +263,18 @@ def configurations(cell: CellReaction, t: dict, rng: np.random.Generator,
                 c.notes.append(note)
             out.append(c)
 
+    others = [g for g, nu in cell.gas_terms().items() if g != "H2" and nu != 0 and realgas.fluid(g)]
+    steel = lambda g, m: storage.gas_tank(g, m, t_k, p_min, p_max, t)
     if has_h2:
         add(_optimise(cell, t, "electric", p_min, p_max,
-                      lambda m: storage.tank(m, t_k, p_min, p_max, t), rng=rng))
+                      lambda m: storage.tank(m, t_k, p_min, p_max, t), rng=rng, other_gas=steel))
         add(_optimise(cell, t, "electric", p_max * 0.999, p_max,
-                      lambda m: storage.piston(m, t_k, p_max, t), rng=rng))
+                      lambda m: storage.piston(m, t_k, p_max, t), rng=rng, other_gas=steel))
         win = [x * 1e5 for x in t["storage"]["plateau_window_bar"]]
         for a in storage.pick_alloys(t_k, win[0], min(win[1], p_max), 2):
             p = a.p_eq(t_k)
             add(_optimise(cell, t, "electric", p * 0.999, p,
-                          lambda m, a=a: storage.hydride(m, t_k, a, power_w, e_kwh, t), rng=rng))
+                          lambda m, a=a: storage.hydride(m, t_k, a, power_w, e_kwh, t), rng=rng, other_gas=steel))
         if cell.medium in ("alkaline", "aqueous (pH-free)"):
             for a in storage.pick_alloys(t_k, 1e3, P_STD * 2, 2):
                 p = a.p_eq(t_k)
@@ -263,7 +282,7 @@ def configurations(cell: CellReaction, t: dict, rng: np.random.Generator,
                               lambda m, a=a: storage.hydride(m, t_k, a, power_w, e_kwh, t, as_electrode=True),
                               needs_pt=False,
                               i0_neg=Value(1e-2, 1e-4, 1e-1, "unknown", "hydride electrode kinetics", log=True),
-                              rng=rng))
+                              rng=rng, other_gas=steel))
         if cell.dissolved_moles() > 0:
             w = storage.compression_work_j_per_mol(t_k, rf["electrolyser_outlet_bar"] * 1e5, p_max,
                                                    rf["compressor_stages"], rf["compressor_efficiency"])
@@ -273,8 +292,28 @@ def configurations(cell: CellReaction, t: dict, rng: np.random.Generator,
                 litres = n_rxn * cell.dissolved_moles() / max(sol, 1e-3)
                 return max(h2_mol * M_H2 / rf["fill_kg_per_min"], litres / rf["swap_l_per_min"]) / 60
             add(_optimise(cell, t, "swap", p_min, p_max, lambda m: storage.tank(m, t_k, p_min, p_max, t),
-                          w_comp_v=w * cell.h2_consumed() / (cell.n * F), rng=rng, recharge=swap_time),
+                          w_comp_v=w * cell.h2_consumed() / (cell.n * F), rng=rng, recharge=swap_time, other_gas=steel),
                 "station regenerates the electrolyte with the same reaction run backwards (cost not counted)")
+    if has_h2 and others:
+        # Sealed two-gas cell: hydrogen AND the other gas in carbon-fibre tanks
+        # (wall fitted to the Toyota Mirai tank), charged by high-pressure electrolysis.
+        tc = composite_targets(t)
+        for pb in rf["tank_pressures_bar"]:
+            p = pb * 1e5
+            c = _optimise(cell, tc, "electric", p_min, p, lambda m, p=p: storage.tank(m, t_k, p_min, p, tc),
+                          rng=rng, other_gas=lambda g, m, p=p: storage.gas_tank(g, m, t_k, p_min, p, tc))
+            if c:
+                c.store.label = f"both gases in carbon-fibre tanks {pb:g} bar"
+                c.notes += [f"sealed: hydrogen and {', '.join(others)} each kept in a carbon-fibre tank "
+                            f"swinging up to {pb:g} bar; tank wall fitted to " + TOYOTA_TANK,
+                            "charging makes the gases at full pressure (high-pressure electrolysis): the membrane "
+                            "must hold the pressure on both sides; no compressor",
+                            "the water made on discharge is kept in a small tank (its mass is counted as the "
+                            "gases' mass, the tank wall is not)"]
+                if "O2" in others:
+                    c.notes.append("oxygen at high pressure: every part touching it must be oxygen-compatible "
+                                   "(fire risk); hydrogen and oxygen in one sealed system can explode if they mix")
+                add(c)
     return out
 
 
@@ -295,6 +334,16 @@ def composite_stress_mpa(t: dict) -> float:
     return sm["shape_factor"] * rf["composite_wall_density_kg_m3"] * p / (ratio * rho_h2) / 1e6
 
 
+def composite_targets(t: dict) -> dict:
+    """Targets with the tank wall changed to carbon fibre (refuel and sealed two-gas tanks)."""
+    rf = t["refuel"]
+    tc = copy.deepcopy(t)
+    tc["system"].update(wall_density_kg_m3=rf["composite_wall_density_kg_m3"],
+                        wall_allowable_stress_mpa=composite_stress_mpa(t),
+                        wall_usd_per_kg=rf["composite_usd_per_kg"])
+    return tc
+
+
 def refuel_configurations(all_cells: list[CellReaction], t: dict, rng) -> list[Config]:
     """Hydrogen car style: fuel cell on air, tank refilled at a station."""
     u, d, rf = t["use"], t["design"], t["refuel"]
@@ -302,10 +351,7 @@ def refuel_configurations(all_cells: list[CellReaction], t: dict, rng) -> list[C
     cell = air_cell(all_cells, "acid")
     if cell is None:
         return []
-    tc = copy.deepcopy(t)
-    tc["system"].update(wall_density_kg_m3=rf["composite_wall_density_kg_m3"],
-                        wall_allowable_stress_mpa=composite_stress_mpa(t),
-                        wall_usd_per_kg=rf["composite_usd_per_kg"])
+    tc = composite_targets(t)
     fixed = {"O2": rf["air_o2_fraction"] * P_STD}
     p_min = u["p_min_bar"] * 1e5
     out = []

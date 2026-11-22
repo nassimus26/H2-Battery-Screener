@@ -157,6 +157,17 @@ def tank(moles: float, t_k: float, p_min: float, p_max: float, t: dict) -> Stora
                    sp.burst_tnt_kg, sp.leak_g_s, loss, h2_inventory_mol=inv)
 
 
+def gas_tank(gas: str, moles: float, t_k: float, p_min: float, p_max: float, t: dict) -> tuple[float, float, float]:
+    """(kg, litres, USD) of a vessel for a gas other than hydrogen that a sealed
+    cell must keep (oxygen of a hydrogen-oxygen cell, NO of a nitrate cell...).
+    Same wall law and material as the hydrogen tank; the gas swings between
+    max(p_min, 1 atm) and p_max like the hydrogen does."""
+    sm, d = t["system"], t["design"]
+    v = realgas.swing_volume(gas, moles, t_k, max(p_min, P_STD), p_max)
+    mass = _vessel(p_max, v, sm)
+    return mass, v * 1000, mass * sm["wall_usd_per_kg"] * d["vessel_fabrication_factor"]
+
+
 def piston(moles: float, t_k: float, p: float, t: dict) -> Storage:
     sm, d, s = t["system"], t["design"], t["storage"]
     v = moles / realgas.molar_density("H2", t_k, p)

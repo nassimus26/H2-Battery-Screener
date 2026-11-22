@@ -151,7 +151,7 @@ t = make_targets(SETTINGS_NOW)
 E_KWH = power * hours
 
 
-MODEL_VERSION = 6   # bump when model outputs change shape, so cached results are recomputed
+MODEL_VERSION = 7   # bump when model outputs change shape, so cached results are recomputed
 
 
 def tkey(t_: dict) -> str:

@@ -67,3 +67,30 @@ def test_refuel_mode_counts_the_whole_chain(targets):
     cfgs = options.refuel_configurations(discover.table_pairs(), targets, np.random.default_rng(0))
     assert cfgs and all(0 < c.rte < 0.83 for c in cfgs)         # below a lone H2-O2 cell's ideal
     assert all(c.recharge_h < 1 for c in cfgs)                  # filling, not charging
+
+
+def test_tank_wall_per_mole_does_not_depend_on_pressure(targets):
+    # thin wall: mass = shape x rho x p V / sigma = shape x rho x n Z R T / sigma
+    m10 = storage.gas_tank("O2", 100.0, T, 1e5, 10e5, targets)[0]
+    m60 = storage.gas_tank("O2", 100.0, T, 1e5, 60e5, targets)[0]
+    assert m60 == pytest.approx(m10 * (10 - 1) / (60 - 1) * 60 / 10, rel=0.1)   # same wall for the same swing fraction
+
+
+def test_sealed_hydrogen_oxygen_cell_keeps_both_gases(targets):
+    cell = next(c for c in discover.table_pairs() if c.name.startswith("O2(g) + 2 H2(g) -> 2 H2O(l)")
+                and c.medium == "acid")
+    cfgs = options.configurations(cell, targets, np.random.default_rng(0))
+    assert all("O2 storage" in c.cost_parts for c in cfgs)             # no sealed option forgets the oxygen
+    cf = [c for c in cfgs if "both gases in carbon-fibre" in c.store.label]
+    steel = next(c for c in cfgs if c.store.kind == "tank" and "carbon" not in c.store.label)
+    assert len(cf) == 2 and all(c.wh_kg > 3 * steel.wh_kg for c in cf)  # carbon fibre beats steel by far
+    assert all(c.wh_kg > 140 for c in cf)                               # lighter than a Li-ion pack
+    assert any("oxygen-compatible" in n for n in cf[0].notes)
+
+
+def test_oxygen_storing_cell_may_charge_like_an_electrolyser(targets):
+    cell = next(c for c in discover.table_pairs() if c.name.startswith("O2(g) + 2 H2(g) -> 2 H2O(l)")
+                and c.medium == "acid")
+    c = options.configurations(cell, targets, None)[0]
+    # at the stationary default the cell runs above the 1.63 V water-window limit of other cells
+    assert c.i_a_cm2 > 0.05
