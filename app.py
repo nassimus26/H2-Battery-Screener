@@ -445,14 +445,16 @@ def render_pair(pr, kp: str):
     st.markdown(f"**Negative** {pr.neg.smiles} (releases {pr.kn} H2, steps {', '.join(f'{x:.2f}' for x in (pr.neg.steps or [pr.neg.e0]))} V)  \n"
                 f"**Positive** {pr.pos.smiles} (takes {pr.kp} H2, steps {', '.join(f'{x:.2f}' for x in (pr.pos.steps or [pr.pos.e0]))} V)")
     st.image(draw([pr.neg.smiles, pr.pos.smiles], ["negative", "positive"]))
-    c = st.columns(5)
+    c = st.columns(6)
     c[0].metric("Cell voltage", f"{pr.voltage:.2f} V")
     c[1].metric("Liquids", f"{pr.wh_l:.0f} Wh/L", f"{pr.wh_l - LI['wh_l']:+.0f} vs Li-ion pack")
     c[2].metric("Must cost below", f"${pairs.price_ceiling_usd_kg(pr, LI['usd_kwh_stationary']):.1f}/kg")
     c[3].metric("Free hydrogen", "none")
     sn, sp_ = synthesis.estimate(pr.neg.smiles, t["synthesis"]), synthesis.estimate(pr.pos.smiles, t["synthesis"])
-    c[4].metric("Estimated prices", f"${sn.usd_kg:,.0f} / ${sp_.usd_kg:,.0f} per kg",
-                help=f"negative: {sn.describe()}; positive: {sp_.describe()}")
+    c[4].metric("Negative costs", f"${sn.usd_kg:,.0f}/kg",
+                help=f"Estimated price to make the negative molecule: {sn.describe()}.")
+    c[5].metric("Positive costs", f"${sp_.usd_kg:,.0f}/kg",
+                help=f"Estimated price to make the positive molecule: {sp_.describe()}.")
     st.caption("; ".join(pr.notes + pr.neg.notes + pr.pos.notes))
     cfg = options.pair_configuration(pr, t, np.random.default_rng(13))
     st.markdown("**Built as a full battery, vs lithium-ion**")
