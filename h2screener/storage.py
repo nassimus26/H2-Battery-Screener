@@ -157,14 +157,41 @@ def tank(moles: float, t_k: float, p_min: float, p_max: float, t: dict) -> Stora
                    sp.burst_tnt_kg, sp.leak_g_s, loss, h2_inventory_mol=inv)
 
 
-def gas_tank(gas: str, moles: float, t_k: float, p_min: float, p_max: float, t: dict) -> tuple[float, float, float]:
-    """(kg, litres, USD) of a vessel for a gas other than hydrogen that a sealed
-    cell must keep (oxygen of a hydrogen-oxygen cell, NO of a nitrate cell...).
-    Same wall law and material as the hydrogen tank; the gas swings between
-    max(p_min, 1 atm) and p_max like the hydrogen does."""
+TROUTON = 88.0      # J/mol/K: evaporation entropy at the boiling point (Trouton's rule)
+LIQUID_KG_L = 1.0   # density assumed for a condensed gas without equation-of-state data
+
+
+def vapour_pressure(tb_k: float, t_k: float) -> float:
+    """Pa, Clausius-Clapeyron with Trouton's rule (+/- a factor ~2)."""
+    return P_STD * math.exp(TROUTON / R * (1 - tb_k / t_k))
+
+
+def gas_tank(gas: str, moles: float, t_k: float, p_min: float, p_max: float, t: dict,
+             tb_k: float | None = None) -> tuple[float, float, float]:
+    """(kg, litres, USD) of a vessel for a gas a sealed cell must keep
+    (oxygen of a hydrogen-oxygen cell, NO of a nitrate cell...). Same wall law
+    and material as the hydrogen tank; the gas swings between max(p_min, 1 atm)
+    and p_max. A gas with no equation of state in CoolProp is ideal, and is
+    kept as a liquid at its vapour pressure when that is below p_max
+    (boiling point tb_k, from the measured table when not given)."""
     sm, d = t["system"], t["design"]
-    v = realgas.swing_volume(gas, moles, t_k, max(p_min, P_STD), p_max)
-    mass = _vessel(p_max, v, sm)
+    lo = max(p_min, P_STD)
+    if realgas.fluid(gas):
+        v = realgas.swing_volume(gas, moles, t_k, lo, p_max)
+        p_wall = p_max
+    else:
+        if tb_k is None:
+            from . import gases
+            tb_k = gases.measured_tb(gas) or 0.0
+        p_vap = vapour_pressure(tb_k, t_k) if tb_k > 0 else math.inf
+        if p_vap < p_max:                       # condensed: liquid at its own vapour pressure
+            from pymatgen.core import Composition
+            v = moles * Composition(gas).weight / 1000 / (LIQUID_KG_L * 1000)
+            p_wall = max(p_vap, P_STD)
+        else:
+            v = moles * R * t_k / (p_max - lo)
+            p_wall = p_max
+    mass = _vessel(p_wall, v, sm)
     return mass, v * 1000, mass * sm["wall_usd_per_kg"] * d["vessel_fabrication_factor"]
 
 

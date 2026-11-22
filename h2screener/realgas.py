@@ -21,6 +21,17 @@ FLUIDS = {
     "NH3": "Ammonia",
     "HCl": "HydrogenChloride",
     "H2S": "HydrogenSulfide",
+    # gases of the sealed two-gas screener (formulas with a single isomer only)
+    "CH4": "Methane",
+    "CO2": "CarbonDioxide",
+    "CO": "CarbonMonoxide",
+    "N2": "Nitrogen",
+    "C2H6": "Ethane",
+    "C2H4": "Ethylene",
+    "C3H8": "n-Propane",
+    "N2O": "NitrousOxide",
+    "SO2": "SulfurDioxide",
+    "COS": "CarbonylSulfide",
 }
 
 

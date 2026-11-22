@@ -19,7 +19,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from h2screener import ai_search, design, discover, explain, options, pairs, rank, reference, runs, stackcost, synthesis, animation
+from h2screener import ai_search, gases, design, discover, explain, options, pairs, rank, reference, runs, stackcost, synthesis, animation
 from h2screener import molecules as M
 
 ROOT = Path(__file__).resolve().parent
@@ -718,7 +718,7 @@ st.title("Hydrogen battery simulator")
 st.caption("Candidates come from thermodynamic data and physical laws; every result is compared with the "
            "lithium-ion packs in current cars (Tesla NMC/NCA, BYD Blade LFP).")
 
-TAB_NAMES = ["⭐ Interesting candidates", "Best candidates", "Trade-offs", "Candidate detail", "Storage and recharge options",
+TAB_NAMES = ["⭐ Interesting candidates", "Gas batteries (sealed)", "Best candidates", "Trade-offs", "Candidate detail", "Storage and recharge options",
              "AI molecule discovery", "Two-molecule batteries (no gas)", "Li-ion reference and validation"]
 if SS.get("cfg_tab") not in TAB_NAMES:
     SS["cfg_tab"] = TAB_NAMES[0]
@@ -883,9 +883,137 @@ def watch_tab():
 with tabs[0]:
     watch_tab()
 
-# ------------------------------------------------------------------ tab 1
+# ------------------------------------------------------------------ gas batteries
+
+@st.cache_resource
+def gas_job() -> dict:
+    """Background xTB computation of the generated gas molecules."""
+    return {"thread": None, "done": 0, "total": 0}
+
+
+def gas_energy_count() -> int:
+    return sum(1 for v in gases.load_energies().values() if v is not None)
+
+
+@st.cache_data(show_spinner=False)
+def gas_screen(n_energies: int):
+    cells, sp = gases.screen()
+    fit = gases.fit_atom_equivalents(gases.load_energies())
+    return cells, sp, fit
+
+
+@st.cache_data(show_spinner=False)
+def gas_sized(targets_json: str, n_energies: int, top: int, measured_only: bool, no_toxic: bool,
+              proven_only: bool):
+    tt = json.loads(targets_json)
+    cells, sp, _ = gas_screen(n_energies)
+    pick = [c for c in cells if (not measured_only or not c.computed_only) and (not no_toxic or not c.toxic)
+            and (not proven_only or c.recharge == "demonstrated")]
+    ref = gases.reference_h2_o2(cells)
+    if ref is not None and ref not in pick[:top]:
+        pick = pick[:top - 1] + [ref]
+    out = []
+    for c in pick[:top]:
+        cfgs = options.gas_configurations(c, sp, tt, np.random.default_rng(3))
+        if cfgs:
+            out.append((c, max(cfgs, key=lambda x: x.wh_kg)))
+    return out, sp
+
+
+def gas_tab():
+    st.subheader("Sealed batteries that store their energy in two gases")
+    st.markdown(
+        "Every molecule with up to 4 atoms of C, N, O, F, S or Cl is generated (nothing is picked by hand). "
+        "Its energy comes from measured tables when the molecule is known, otherwise from a quantum-chemistry "
+        "calculation (GFN2-xTB). Every pair of an **oxidant gas** and a **fuel gas** that exchange hydrogen "
+        "through an acid membrane is built as a **sealed battery**: each gas in its own carbon-fibre tank, "
+        "liquids (water...) in a small tank, then sized for your power and hours like every other design. "
+        "A tank wall weighs the same per mole of gas at any pressure, so what makes a gas battery light is "
+        "**energy per mole of stored gas** (electrons x voltage).")
+    job = gas_job()
+    running = job["thread"] is not None and job["thread"].is_alive()
+    n_e = gas_energy_count()
+    todo = len([x for x in gases.to_compute() if x not in gases.load_energies()])
+    c1, c2 = st.columns([3, 1])
+    c1.caption(f"{len(gases.all_species()):,} molecules generated; {n_e:,} computed with xTB; "
+               f"{todo:,} still to compute." + (f" Computing: {job['done']}/{job['total']}..." if running else ""))
+    if c2.button("Compute missing molecules", disabled=running or todo == 0, width="stretch"):
+        import threading
+
+        def work():
+            gases.compute_energies(progress=lambda k, n: job.update(done=k, total=n))
+        job["thread"] = threading.Thread(target=work, daemon=True)
+        job["thread"].start()
+        st.rerun()
+    if n_e == 0:
+        st.info("No molecule computed yet: press 'Compute missing molecules' (a few minutes).")
+        return
+    f1, f2, f3, f4 = st.columns(4)
+    top = f1.slider("Cells to size in detail", 5, 60, 25, key="gas_top")
+    measured_only = f2.toggle("Only molecules that exist (measured)", False, key="gas_measured")
+    no_toxic = f3.toggle("Hide toxic gases", False, key="gas_notoxic")
+    proven_only = f4.toggle("Only proven rechargeable", False, key="gas_proven")
+    with st.spinner("Sizing the best gas batteries..."):
+        sized, sp = gas_sized(tkey(t), n_e, top, measured_only, no_toxic, proven_only)
+    _, _, fit = gas_screen(n_e)
+    if fit:
+        st.caption(f"Computed molecules: Gibbs energy from xTB with atom equivalents fitted to {fit.n} measured "
+                   f"molecules, leave-one-out error {fit.rmse_loo:.0f} kJ/mol (about "
+                   f"{fit.rmse_loo * 1000 / (2 * 96485):.2f} V on a 2-electron step).")
+    if not sized:
+        st.warning("No sealed two-gas cell passes these filters.")
+        return
+    best = max(sized, key=lambda x: x[1].wh_kg)[1]
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Lightest gas battery", f"{best.wh_kg:.0f} Wh/kg", f"{best.wh_kg - LI['wh_kg']:+.0f} vs Li-ion pack {LI['wh_kg']:.0f}")
+    k2.metric("Its volume", f"{best.wh_l:.0f} Wh/L", f"{best.wh_l - LI['wh_l']:+.0f} vs Li-ion pack {LI['wh_l']:.0f}")
+    v_, d_, h_ = explain.cost_range(best.capex_usd_kwh, best.capex_band, LI["usd_kwh_stationary"])
+    k3.metric("Its build cost", v_, d_, delta_color="inverse", help=h_)
+    rows = []
+    for c, cf in sized:
+        rows.append({
+            "reaction (discharge)": c.name,
+            "voltage V": f"{c.voltage:.2f} ± {c.band_v:.2f}",
+            "Wh per mol of gas": round(c.wh_per_mol_gas, 1),
+            "Wh/kg (system)": round(cf.wh_kg),
+            "Wh/L (system)": round(cf.wh_l),
+            "build USD/kWh": round(cf.capex_usd_kwh),
+            "build p10-p90 (reaction speed)": band_text(cf.capex_band),
+            "efficiency": round(cf.rte, 2),
+            "recharge proven?": c.recharge,
+            "beats Li-ion on": ", ".join(k for k, ok in (("weight", cf.wh_kg > LI["wh_kg"]), ("volume", cf.wh_l > LI["wh_l"]),
+                                                          ("cost", cf.capex_usd_kwh < LI["usd_kwh_stationary"])) if ok) or "-",
+            "toxic": ", ".join(c.toxic) or "-",
+            "computed only (may not exist)": ", ".join(sp[s].formula for s in c.computed_only) or "-",
+            "tanks": cf.store.label,
+        })
+    df_ = pd.DataFrame(rows).sort_values("Wh/kg (system)", ascending=False)
+    st.dataframe(df_, hide_index=True, width="stretch")
+    st.download_button("Download table (CSV)", df_.to_csv(index=False), "gas_batteries.csv")
+    names = [c.name for c, _ in sized]
+    pick = st.selectbox("Details of", range(len(sized)), format_func=lambda i: names[i], key="gas_pick")
+    c, cf = sized[pick]
+    st.markdown(f"**{c.name}** — {c.n_e} electrons per reaction, {c.voltage:.2f} V (± {c.band_v:.2f} V)")
+    for (kind, why), side in zip(c.evidence, ("positive (oxidant) side", "negative (fuel) side")):
+        st.markdown(f"- Recharge, {side}: **{kind}** — {why}")
+    for s in sorted({s for s in c.stoich if s in sp and s != "O"}):
+        g = sp[s]
+        st.markdown(f"- {g.name} `{s}`: boils at {g.tb_k - 273.15:.0f} C ({g.tb_source}), "
+                    f"{'gas' if g.gas else 'liquid'} at 25 C; energy: {g.source}"
+                    + ("; " + "; ".join(g.notes) if g.notes else ""))
+    li_metrics(cf, "gas")
+    show_cost(cf.cost_parts, {"i_a_cm2": cf.i_a_cm2, "area_m2": cf.area_m2, "v_dis": cf.v_dis}, "gas")
+    st.write(f"Efficiency {cf.rte:.2f} (p10-p90 {cf.rte_band[0]:.2f}-{cf.rte_band[2]:.2f}); mass {cf.mass_kg:,.0f} kg, "
+             f"volume {cf.volume_l:,.0f} L; hydrogen burst energy {cf.store.burst_tnt_kg:.2f} kg TNT.")
+    st.caption("; ".join(cf.notes))
+
 
 with tabs[1]:
+    gas_tab()
+
+# ------------------------------------------------------------------ tab 1
+
+with tabs[2]:
     st.subheader(f"{len(results)} couples screened; {len(df)} sized for {power:g} kW x {hours:g} h")
     if not df.empty:
         st.markdown("#### Did we find something better than today's lithium-ion? (best sealed hydrogen design per figure)")
@@ -911,7 +1039,7 @@ with tabs[1]:
 
 # ------------------------------------------------------------------ tab 2
 
-with tabs[2]:
+with tabs[3]:
     pts = []
     for d in designs:
         for p in d.points:
@@ -949,7 +1077,7 @@ with tabs[2]:
 
 # ------------------------------------------------------------------ tab 3
 
-with tabs[3]:
+with tabs[4]:
     if designs:
         names = [d.cell.name for d in designs if d.best]
         last = st.session_state.get("selected_couple")
@@ -977,7 +1105,7 @@ def option_table(targets_json: str, name: str | None, smiles: tuple[str, ...]):
     return cfgs
 
 
-with tabs[4]:
+with tabs[5]:
     st.write("Every way to store the hydrogen and to recharge, sized for the same job "
              f"({power:g} kW for {hours:g} h) and compared with lithium-ion car packs.")
     st.markdown("- **electric**: sealed, recharged with electricity only; the gas never leaves.\n"
@@ -1015,7 +1143,7 @@ with tabs[4]:
 
 # ------------------------------------------------------------------ tab 5
 
-with tabs[5]:
+with tabs[6]:
     st.write("A genetic algorithm writes new molecules (SELFIES mutations and crossovers); a machine-learning "
              "model predicts which are worth computing; GFN2-xTB quantum chemistry computes their voltage with "
              "hydrogen; the model learns from every result. Molecules not in PubChem have never been reported.")
@@ -1083,7 +1211,7 @@ with tabs[5]:
 
 # ------------------------------------------------------------------ tab 6: two molecules
 
-with tabs[6]:
+with tabs[7]:
     st.write("Hydrogen moves between two molecules as protons and electrons and is never a gas: "
              "no pressure, no tank, no platinum, a water-based liquid that cannot burn. "
              "Negative: N-H2 -> N + 2H+ + 2e-; positive: P + 2H+ + 2e- -> P-H2; voltage = E(P) - E(N), "
@@ -1162,7 +1290,7 @@ with tabs[6]:
 
 # ------------------------------------------------------------------ tab 7
 
-with tabs[7]:
+with tabs[8]:
     st.subheader("Lithium-ion batteries in current cars (liquid electrolyte, not solid-state)")
     st.dataframe(pd.DataFrame([{"battery": b["name"], "level": b["level"],
                                 "Wh/kg": "-".join(f"{x:g}" for x in b.get("wh_kg", [])),

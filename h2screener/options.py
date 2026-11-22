@@ -196,7 +196,7 @@ def _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_com
         parts = {"hydrogen storage": st.capex_usd}
         if other_gas is not None:
             for g, nu in cell.gas_terms().items():
-                if g == "H2" or nu == 0 or not realgas.fluid(g):
+                if (g == "H2" and st.kind != "none") or nu == 0:
                     continue
                 kg_, l_, usd_ = other_gas(g, abs(n_rxn * nu))
                 mass, vol, capex = mass + kg_, vol + l_ / 1000, capex + usd_
@@ -263,7 +263,7 @@ def configurations(cell: CellReaction, t: dict, rng: np.random.Generator,
                 c.notes.append(note)
             out.append(c)
 
-    others = [g for g, nu in cell.gas_terms().items() if g != "H2" and nu != 0 and realgas.fluid(g)]
+    others = [g for g, nu in cell.gas_terms().items() if g != "H2" and nu != 0]
     steel = lambda g, m: storage.gas_tank(g, m, t_k, p_min, p_max, t)
     if has_h2:
         add(_optimise(cell, t, "electric", p_min, p_max,
@@ -400,3 +400,54 @@ def pair_configuration(pr, t: dict, rng) -> Config | None:
     if c is not None:
         c.notes += pr.notes
     return c
+
+
+def gas_cell_reaction(gc, sp: dict) -> CellReaction:
+    """A screened two-gas cell (gases.GasCell) as a cell reaction for the sizing model."""
+    from .reactions import Species
+
+    def species(s):
+        if s == "O":
+            return Species("H2O", 0, "l", "H2O(l)")
+        g = sp[s]
+        phase = "g" if g.gas else "l"
+        return Species(g.formula, 0, phase, f"{g.formula}({phase})")
+    reac = {species(s): n for s, n in gc.stoich.items() if n > 0}
+    prod = {species(s): -n for s, n in gc.stoich.items() if n < 0}
+    return CellReaction(None, None, reac, prod, gc.n_e, gc.voltage, "acid", origin="gas-screen",
+                        source=f"Gibbs energies: measured or GFN2-xTB (+/-{gc.band_v:.2f} V)")
+
+
+def gas_configurations(gc, sp: dict, t: dict, rng) -> list[Config]:
+    """A screened two-gas cell built sealed, every gas in carbon-fibre tanks
+    (350 and 700 bar), liquids in a small tank (mass counted, wall not)."""
+    u, rf = t["use"], t["refuel"]
+    t_k = u["temperature_c"] + 273.15
+    p_min = u["p_min_bar"] * 1e5
+    cell = gas_cell_reaction(gc, sp)
+    tb = {sp[s].formula: sp[s].tb_k for s in gc.stoich if s in sp}
+    tc = composite_targets(t)
+    none = lambda m: storage.Storage("none", "gases in their own tanks", 0.0, 0.0, 0.0, "", P_STD, 0.0,
+                                     0.0, 0.0, 0.0)
+    i0_neg = None if gc.neg is None else Value(1e-3, 1e-5, 1e-1, "unknown",
+                                               "oxidation of this fuel gas (no data)", log=True)
+    out = []
+    for pb in rf["tank_pressures_bar"]:
+        p = pb * 1e5
+        c = _optimise(cell, tc, "electric", p_min, p, none, i0_neg=i0_neg, rng=rng,
+                      other_gas=lambda g, m, p=p: storage.gas_tank(g, m, t_k, p_min, p, tc, tb.get(g)))
+        if c:
+            h2 = cell.h2_consumed()
+            if h2 > 0:      # burst energy and leak of the hydrogen tank
+                e_kwh = t["design"]["power_kw"] * t["design"]["hours"]
+                n_rxn = e_kwh * 1000 * WH / c.v_dis / (cell.n * F)
+                ht = storage.tank(n_rxn * h2, t_k, p_min, p, tc)
+                c.store.burst_tnt_kg, c.store.leak_g_s = ht.burst_tnt_kg, ht.leak_g_s
+                c.store.h2_loss_per_year, c.store.p_design_pa = ht.h2_loss_per_year, p
+            c.store.label = f"all gases in carbon-fibre tanks {pb:g} bar"
+            c.store.pressure = f"{p_min / 1e5:g} -> {pb:g} bar"
+            c.notes += ["sealed: every gas in its own carbon-fibre tank (wall fitted to " + TOYOTA_TANK + "); "
+                        "liquids in a small tank (mass counted, wall not)",
+                        "a gas that condenses below the tank pressure is kept as a liquid at its vapour pressure"]
+            out.append(c)
+    return out
