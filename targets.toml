@@ -1,0 +1,134 @@
+# Targets and engineering assumptions for the screener.
+# Every range here is an assumption, not data; results report which of them
+# dominates each candidate's uncertainty. Edit freely.
+
+[use]
+application = "stationary"
+temperature_c = 25.0
+p_max_bar = 60.0               # highest H2 pressure allowed
+p_min_bar = 2.0                # H2 pressure left at the end of discharge
+pressure_grid_bar = [3, 5, 10, 20, 30, 45, 60]
+rte_target = 0.75              # round-trip energy efficiency the charge rate must keep
+charge_hours_target = 6.0
+oxygen_margin_v = 0.4          # how far above 1.229 V an aqueous cell may charge before O2 evolution counts as a side reaction
+
+[ranking]
+# Weights of the desirabilities in a weighted geometric mean (stationary use:
+# cost, efficiency and safety first, mass and volume last).
+cost = 3.0
+efficiency = 3.0
+safety = 3.0
+charge_speed = 2.0
+supply = 1.0
+volume = 1.0
+mass = 0.5
+reversibility = 2.0
+closure = 2.0                  # chemistry that drifts out of the couple needs maintenance
+cost_ref_usd_kwh = 50.0
+mass_ref_kg_kwh = 10.0
+volume_ref_l_kwh = 10.0
+monte_carlo_draws = 400
+
+[estimates]
+unknown_i0_a_cm2 = [1e-6, 1e-1]          # exchange current of an untested electrode (geometric)
+catalyst_roughness = [10, 200]           # cm2 Pt per cm2 electrode
+gap_cm = [0.005, 0.05]
+separator_ohm_cm2 = [0.03, 0.5]
+hydrodynamic_radius_nm = [0.15, 0.45]
+solubility_mol_l = [0.5, 4.0]
+boundary_layer_um = [10, 100]
+gas_electrode_ilim_1atm_a_cm2 = [0.5, 5.0]
+solid_ilim_a_cm2 = [0.005, 1.0]
+coulombic_efficiency = [0.95, 0.995]
+
+[estimates.conductivity_s_cm]
+acid = [0.3, 0.8]
+alkaline = [0.3, 0.65]
+"aqueous (pH-free)" = [0.3, 0.65]
+hydride = [1e-4, 1e-2]
+other = [1e-3, 1e-1]
+
+[system]
+solubility_mol_l = 2.0
+shape_factor = 2.0               # long cylinder
+wall_density_kg_m3 = 7900.0      # steel
+wall_allowable_stress_mpa = 115.0
+wall_usd_per_kg = 5.0
+areal_capacity_mah_cm2 = 20.0
+stack_areal_mass_g_cm2 = 0.15
+stack_thickness_cm = 0.3
+stack_usd_per_kg = 10.0
+pt_loading_mg_cm2 = 0.1
+
+[design]                         # the system the app sizes for each couple
+power_kw = 100.0
+hours = 6.0                      # discharge duration at full power
+lifetime_years = 20
+cycles_per_year = 330
+discount_rate = 0.06
+electricity_usd_kwh = 0.05       # price of charging electricity
+h2_usd_kg = 6.0                  # make-up hydrogen
+om_fraction_capex = 0.01         # routine O&M per year
+# Stack and power-electronics prices are estimated in h2screener/stackcost.py
+# (US DOE, NREL, Noack et al. 2016); these are its mass-production values.
+production_scale = "mass"        # "mass" or "small" (small series, prototypes)
+power_electronics_usd_kw = 97.5
+stack_usd_m2 = 240.0             # gas cell (hydrogen electrode), without platinum
+stack_usd_m2_liquid = 150.0      # liquid cell (two-molecule flow cell)
+vessel_fabrication_factor = 3.0  # finished vessel cost / raw steel cost
+active_excess = 0.2              # reactant excess over the stoichiometric need
+unknown_material_usd_kg = 50.0   # for elements without price data
+
+[safety]
+leak_hole_mm2 = 1.0              # reference leak
+discharge_coefficient = 0.6
+room_m3 = 100.0
+air_changes_per_hour = 6.0
+
+[maintenance]
+vessel_aspect = 3.0              # cylinder length / diameter
+seal_count = 6
+seal_leak_mbar_l_s = [1e-7, 1e-5]   # helium leak-tightness class of each seal
+allowed_h2_loss = 0.10           # refill when this fraction of the hydrogen is gone
+
+[storage]                          # where the hydrogen sits (all assumptions; edit)
+piston_mass_factor = 1.5           # piston/bellows mechanism over the plain vessel
+piston_cost_factor = 2.0
+hydride_usable_fraction = 0.8      # share of the alloy capacity cycled on the plateau
+hydride_bulk_density_kg_l = 4.0    # powder bed
+hydride_processing_factor = 2.0    # finished alloy / raw element cost
+hydride_gas_void_fraction = 0.5    # gas space between particles
+hydride_pressure_margin = 1.5      # vessel rated above the plateau
+plateau_window_bar = [1.2, 60.0]   # plateaus considered for the alloy search
+
+[refuel]                           # off-board hydrogen chain for refuel modes
+electrolyser_outlet_bar = 30.0
+compressor_stages = 3
+compressor_efficiency = 0.70
+tank_pressures_bar = [350.0, 700.0]
+fill_kg_per_min = 1.0              # station dispensing rate
+swap_l_per_min = 100.0             # electrolyte exchange rate
+composite_wall_density_kg_m3 = 1600.0      # carbon-fibre tank wall (refuel tanks)
+composite_reference_wt_pct = 5.7          # Toyota Mirai (2014) tank system, 700 bar: wall stress is fitted to it
+composite_reference_bar = 700.0
+composite_usd_per_kg = 30.0
+air_o2_fraction = 0.2095
+
+[synthesis]                        # what a molecule costs to make (h2screener/synthesis.py)
+# Anchors: molecules with a known bulk (tonne-scale) price, USD/kg. These are
+# approximate industrial prices, good to about a factor of 2, not quotes; the
+# AQDS value is the at-scale estimate of Dieterich et al. (2018). The price
+# line log10(USD/kg) = a + b x SA score is fitted to them.
+spread = 3.0                       # p10-p90 = price / spread .. price x spread
+price_factor = 1.0                 # multiply every estimate (sidebar 'Assumptions')
+search_ref_usd_kg = 20.0           # the AI search starts to penalise above this price
+search_min_factor = 0.25           # strongest penalty
+anchors = [
+  { name = "hydroquinone",    smiles = "Oc1ccc(O)cc1",                                         usd_kg = 3.0 },
+  { name = "p-benzoquinone",  smiles = "O=C1C=CC(=O)C=C1",                                     usd_kg = 5.0 },
+  { name = "anthraquinone",   smiles = "O=C1c2ccccc2C(=O)c2ccccc12",                           usd_kg = 3.0 },
+  { name = "AQDS",            smiles = "O=C1c2ccc(S(=O)(=O)O)cc2C(=O)c2cc(S(=O)(=O)O)ccc12",   usd_kg = 5.0 },
+  { name = "methyl viologen", smiles = "C[n+]1ccc(-c2cc[n+](C)cc2)cc1",                        usd_kg = 3.0 },
+  { name = "4-hydroxy-TEMPO", smiles = "CC1(C)CC(O)CC(C)(C)N1[O]",                             usd_kg = 15.0 },
+  { name = "riboflavin",      smiles = "Cc1cc2nc3c(=O)[nH]c(=O)nc-3n(C[C@H](O)[C@H](O)[C@H](O)CO)c2cc1C", usd_kg = 40.0 },
+]

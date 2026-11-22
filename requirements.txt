@@ -1,0 +1,14 @@
+ase==3.29.0
+coolprop==8.0.0
+h-transport-materials==0.18.4
+mp-api==0.47.2
+numpy==2.5.5
+pandas==3.1.1
+plotly==7.1.0
+pymatgen==2026.10.24
+pytest==9.2.0
+rdkit==2026.9.2
+scikit-learn==1.9.1
+selfies==2.2.0
+streamlit==1.67.0
+tblite==0.8.0

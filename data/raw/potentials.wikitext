@@ -1,0 +1,3038 @@
+{{Short description|Data values of standard electrode potential}}
+{{Use American English|date = April 2019}}
+{{Main|Standard electrode potential}}
+
+The '''data below''' tabulates [[standard electrode potential]]s (''E''{{su|p={{resize|50%|⦵}}|b=red}}), in [[volt]]s relative to the [[standard hydrogen electrode]] (SHE), at:
+* [[Temperature]] {{cvt|298.15|K}};
+* [[Activity (chemistry)|Effective concentration]] (activity) {{val|1|u=mol/dm3}} for each [[aqueous solution|aqueous]] or [[Amalgam (chemistry)|amalgamated]] (mercury-alloyed) species;
+* Unit [[activity (chemistry)|activity]] for each solvent and pure solid or liquid species; and
+* [[Fugacity|Absolute partial pressure]] {{cvt|101.325|kPa|atm bar}} for each gaseous reagent&nbsp;&mdash; the convention in most literature data but not the current [[standard state]] ({{cvt|100|kPa|atm bar}}).
+Variations from these ideal conditions affect measured voltage via the [[Nernst equation]].
+
+==Table of standard electrode potentials==
+<!-- This page is very close to the [[WP:PEIS|post-include size limit]].  Please be careful when adding additional data; the editor will likely (but is not guaranteed) warn you as you cross the limit. If free space becomes necessary, consider removing deducible or otherwise duplicative entries. -->
+'''Legend:''' (s) – solid; (l) – liquid; (g) – gas; (aq) – aqueous (default for all charged species); (Hg) – amalgam; bold – water electrolysis equations.
+{{Table alignment}}
+{|class="sortable wikitable col2right"
+|-
+! rowspan="2" | Element
+!colspan="3" class="unsortable"| [[Half-reaction]]
+! rowspan="2" | ''E''{{su|p={{resize|50%|⦵}}|b=red}}<br />/V
+! rowspan="2" |Electrons<br />transferred
+! class="unsortable noprint" rowspan="2"|Reference
+|-
+! Oxidant
+! class="unsortable" | ⇌
+! Reductant
+|-
+|Sr
+| {{chem2|Sr+}} + e<sup>–</sup>
+|⇌
+| Sr(s)
+| −4.101
+|1
+|<!-- Estimated? --><ref name="CRC">{{RubberBible87th}}</ref>
+|-
+| Ca
+| {{chem2|Ca+}} + e<sup>–</sup>
+|⇌
+| Ca(s)
+| −3.8
+|1
+|class="noprint"|<!-- Estimated? --><ref name="CRC" />
+|-
+| Th
+| {{chem2|Th(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Th(3+)}}
+| −3.6
+|1
+|class="noprint"|<!-- Estimated?  OTOH, Greenwood & Earnshaw doesn't appear to cite any sources for this data.  OTOH, this spot in the table is blank in the first edition.   --><ref
+name=Greenwood1263>Greenwood and Earnshaw, p. 1263</ref>
+|-
+| Pr
+| {{chem2|link=Praseodymium|Pr(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Pr(2+)}}
+| −3.1
+|1
+|class="noprint"|Estimated<ref name="VanSrc" />
+|-
+| N
+| 3&nbsp;{{chem2|link=Nitrogen|N2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Hydrogen azide|HN3}}(aq)
+| −3.09
+|2
+|class="noprint"|<ref name=Gre/><ref name=van92/>
+|-
+| Li
+| {{chem2|Li+}} + e<sup>–</sup>
+|⇌
+| [[Lithium|Li(s)]]
+| −3.0401
+|1
+|class="noprint"|<ref name=van92/><ref name=AS5 />{{rp|153}}
+|-
+| N
+| {{chem2|link=Nitrogen gas|N2}}(g) + 4&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Hydroxylamine|NH2OH}}(aq) + 2&nbsp;{{OH-|nolink=y}}
+| −3.04
+|2
+|class="noprint"|<ref name=Gre/>
+|-
+| Cs
+| {{chem2|Cs+}} + e<sup>–</sup>
+|⇌
+| [[Caesium|Cs(s)]]
+| −3.026
+|1
+|class="noprint"|<ref name=van92/>
+|-
+| Ca
+| {{chem2|link=Calcium hydroxide|Ca(OH)2}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Ca(s) + 2&nbsp;{{OH-}}
+| −3.02
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Er
+| {{chem2|Er(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Er(2+)}}
+| −3
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Ba
+| {{chem2|link=Barium hydroxide|Ba(OH)2}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Ba(s) + 2&nbsp;{{OH-|nolink=y}}
+| −2.99
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Rb
+| {{chem2|Rb+}} + e<sup>–</sup>
+|⇌
+| [[Rubidium|Rb(s)]]
+| −2.98
+|1
+|class="noprint"|<ref name=van92/>
+|-
+| K
+| {{chem2|K+}} + e<sup>–</sup>
+|⇌
+| [[Potassium|K(s)]]
+| −2.931
+|1
+|class="noprint"|<ref name=van92/>
+|-
+| Ba
+| {{chem2|Ba(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Barium|Ba(s)]]
+| −2.912
+|2
+|class="noprint"|<ref name=van92/>
+|-
+| La
+| {{chem2|link=Lanthanum hydroxide|La(OH)3}}(s) + 3&nbsp;e<sup>–</sup>
+|⇌
+| La(s) + 3&nbsp;{{OH-|nolink=y}}
+| −2.9
+|3
+|class="noprint"|<ref name=van92/>
+|-
+| Fr
+| {{chem2|Fr+}} + e<sup>–</sup>
+|⇌
+| [[Francium|Fr(s)]]
+| −2.9
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Sr
+| {{chem2|Sr(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Strontium|Sr(s)]]
+| −2.899
+|2
+|class="noprint"|<ref name=van92/>
+|-
+| Sr
+| {{chem2|link=Strontium hydroxide|Sr(OH)2}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Sr(s) + 2&nbsp;{{OH-|nolink=y}}
+| −2.88
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Ca
+| {{chem2|Ca(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Calcium|Ca(s)]]
+| −2.868
+|2
+|class="noprint"|<ref name=van92/><ref name=AS5 />{{rp|153}}
+|-
+| Li
+| {{chem2|Li+}} + {{chem2|C6}}(s) + e<sup>–</sup>
+|⇌
+| {{chem2|link=Lithium-ion_battery#Electrochemistry|LiC6}}(s)
+| −2.84
+|1
+|class="noprint"|<ref name=van92/>
+|-
+| Eu
+| {{chem2|Eu(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Europium|Eu(s)]]
+| −2.812
+|2
+|class="noprint"|<ref name=van92/>
+|-
+| Ra
+| {{chem2|Ra(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Radium|Ra(s)]]
+| −2.8
+|2
+|class="noprint"|<ref name=van92/>
+|-
+| Ho
+| {{chem2|Ho(3+)}} + e<sup>–</sup>
+|⇌
+| Ho{{2+}}
+| −2.8
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Bk
+| {{chem2|Bk(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Bk(2+)}}
+| −2.8
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Yb
+| {{chem2|Yb(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Ytterbium|Yb(s)]]
+| −2.76
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Na
+| {{chem2|Na+}} + e<sup>–</sup>
+|⇌
+| [[Sodium|Na(s)]]
+| −2.71
+|1
+|class="noprint"|<ref name=van92/><ref name=Atk/>
+|-
+| Mg
+| {{chem2|Mg+}} + e<sup>–</sup>
+|⇌
+| Mg(s)
+| −2.7
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Nd
+| {{chem2|Nd(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Nd(2+)}}
+| −2.7
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Mg
+| {{chem2|Mg(OH)2}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Mg(s) + 2&nbsp;{{OH-|nolink=y}}
+| −2.69
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Sm
+| {{chem2|Sm(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Samarium|Sm(s)]]
+| −2.68
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Be
+| {{chem2|link=Beryllium|Be2O_{3}(2–)}} + 3&nbsp;{{H2O-nl}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;Be(s) + 6&nbsp;{{OH-|nolink=y}}
+| −2.63
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| Pm
+| {{chem2|Pm(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Pm(2+)}}
+| −2.6
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Dy
+| {{chem2|Dy(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Dy(2+)}}
+| −2.6
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| No
+| {{chem2|No(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Nobelium|No(s)]]
+| −2.5
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Hf
+| {{chem2|HfO(OH)2}} + {{H2O-nl}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Hf(s) + 4&nbsp;{{OH-|nolink=y}}
+| −2.5
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| Th
+| {{chem2|Th(OH)4}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Th(s) + 4&nbsp;{{OH-|nolink=y}}
+| −2.48
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| Md
+| {{chem2|Md(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Mendelevium|Md(s)]]
+| −2.4
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Tm
+| {{chem2|Tm(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Thulium|Tm(s)]]
+| −2.4
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| La
+| {{chem2|La(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Lanthanum|La(s)]]
+| −2.379
+|3
+|class="noprint"|<ref name=van92/>
+|-
+| Y
+| {{chem2|Y(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Yttrium|Y(s)]]
+| −2.372
+|3
+|class="noprint"|<ref name=van92/>
+|-
+| Mg
+| {{chem2|Mg(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Magnesium|Mg(s)]]
+| −2.372
+|2
+|class="noprint"|<ref name=van92/>
+|-
+| Sc 
+| {{chem2|ScF3}}(aq) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Sc(s) + 3&nbsp;HF(aq) 
+| −2.37 
+| 3 
+| class=noprint | <ref name=AS5/>{{rp|792}}
+|-
+| Zr
+| {{chem2|link=Zirconia|ZrO(OH)2}}(s) + {{H2O-nl}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Zr(s) + 4&nbsp;{{OH-|nolink=y}}
+| −2.36
+|4
+|class="noprint"|<ref name=van92/>
+|-
+| Pr
+| {{chem2|Pr(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Praseodymium|Pr(s)]]
+| −2.353
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Ce
+| {{chem2|Ce(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Cerium|Ce(s)]]
+| −2.336
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Er
+| {{chem2|Er(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Erbium|Er(s)]]
+| −2.331
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Ho
+| {{chem2|Ho(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Holmium|Ho(s)]]
+| −2.33
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Al
+| {{chem2|H2AlO_{3}–}} + {{H2O-nl}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Al(s) + 4&nbsp;{{OH-|nolink=y}}
+| −2.33
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Nd
+| {{chem2|Nd(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Neodymium|Nd(s)]]
+| −2.323
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Tm
+| {{chem2|Tm(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Thulium|Tm(s)]]
+| −2.319
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Al
+| {{chem2|Al(OH)3}}(s) + 3&nbsp;e<sup>–</sup>
+|⇌
+| Al(s) + 3&nbsp;{{OH-|nolink=y}}
+| −2.31
+|3
+|class="noprint"|<ref name="van??"/>
+|-
+| Sm
+| {{chem2|Sm(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Samarium|Sm(s)]]
+| −2.304
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Fm
+| {{chem2|Fm(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Fermium|Fm(s)]]
+| −2.3
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Am
+| {{chem2|Am(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Am(2+)}}
+| −2.3
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Dy
+| {{chem2|Dy(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Dysprosium|Dy(s)]]
+| −2.295
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Lu
+| {{chem2|Lu(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Lutetium|Lu(s)]]
+| −2.28
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Sc 
+| {{chem2|ScF_{2}+}} + 2&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Sc(s) + 2&nbsp;HF(l) 
+| −2.28 
+| 3 
+| class=noprint | <ref name=AS5/>{{rp|792}}
+|-
+| Tb
+| {{chem2|Tb(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Terbium|Tb(s)]]
+| −2.28
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Gd
+| {{chem2|Gd(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Gadolinium|Gd(s)]]
+| −2.279
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| '''H'''
+| '''{{chem2|H2}}(g) + 2&nbsp;e<sup>–</sup>'''
+|⇌
+| '''2&nbsp;{{chem2|H−}}'''
+| '''−2.23'''
+|'''2'''
+|class="noprint"|<ref name="CRC" />
+|-
+| Es
+| {{chem2|Es(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Einsteinium|Es(s)]]
+| −2.23
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Pm
+| {{chem2|Pm(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Promethium|Pm(s)]]
+| −2.2
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Tm
+| {{chem2|Tm(3+)}} + e<sup>–</sup>
+|⇌
+| Tm{{2+}}
+| −2.2
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Dy
+| {{chem2|Dy(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Dysprosium|Dy(s)]]
+| −2.2
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Ac
+| {{chem2|Ac(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Actinium|Ac(s)]]
+| −2.2
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Yb
+| {{chem2|Yb(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Ytterbium|Yb(s)]]
+| −2.19
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Cf
+| {{chem2|Cf(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Californium|Cf(s)]]
+| −2.12
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Nd
+| {{chem2|Nd(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Nd(s)
+| −2.1
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Ho
+| {{chem2|Ho(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Holmium|Ho(s)]]
+| −2.1
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Sc
+| {{chem2|Sc(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Scandium|Sc(s)]]
+| −2.077
+|3
+|class="noprint"|<ref>David R. Lide, ed., CRC Handbook of Chemistry and Physics, Internet Version 2005, http://www.hbcpnetbase.com {{Webarchive|url=https://web.archive.org/web/20170724011402/http://www.hbcpnetbase.com/ |date=2017-07-24 }}, CRC Press, Boca Raton, FL, 2005.</ref>
+|-
+| Al
+| {{chem2|AlF_{6}(3–)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Al(s) + 6&nbsp;{{chem2|F−}}
+| −2.069
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Cm
+| {{chem2|Cm(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Curium|Cm(s)]]
+| −2.04
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Pu
+| {{chem2|Pu(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Plutonium|Pu(s)]]
+| −2.031
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Pr
+| {{chem2|Pr(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Praseodymium|Pr(s)]]
+| −2
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Er
+| {{chem2|link=Erbium|Er(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Er(s)
+| −2
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Eu
+| {{chem2|link=Europium|Eu(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Eu(s)
+| −1.991
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Lr
+| {{chem2|Lr(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Lawrencium|Lr(s)]]
+| −1.96
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Cf
+| {{chem2|Cf(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Cf(s)
+| −1.94
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Es
+| {{chem2|link=Einsteinium|Es(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Es(s)
+| −1.91
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Pa
+| {{chem2|link=Protactinium|Pa(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Pa(3+)}}
+| −1.9
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Am
+| {{chem2|Am(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Americium|Am(s)]]
+| −1.9
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Th
+| {{chem2|Th(4+)}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| [[Thorium|Th(s)]]
+| −1.899
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| Fm
+| {{chem2|Fm(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Fm(s)
+| −1.89
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| N 
+| {{chem2|N2}}(g) + 2&nbsp;{{H2O-nl}} + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|NH3OH+}} 
+| −1.87 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Np
+| {{chem2|Np(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Neptunium|Np(s)]]
+| −1.856
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Be
+| {{chem2|link=Beryllium|Be(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Beryllium|Be(s)]]
+| −1.847
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| P
+| {{chem2|H2PO_{2}–}} + e<sup>–</sup>
+|⇌
+| P(s) + 2&nbsp;{{OH-|nolink=y}}
+| −1.82
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| U
+| {{chem2|U(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Uranium|U(s)]]
+| −1.798
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Sr
+| {{chem2|Sr(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Sr([[Amalgam (chemistry)|Hg]])
+| −1.793
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| B
+| {{chem2|H2BO_{3}–}} + {{H2O-nl}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| B(s) + 4&nbsp;{{OH-|nolink=y}}
+| −1.79
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Th
+| {{chem2|link=Thorium dioxide|ThO2}} + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Th(s) + 2&nbsp;{{H2O-nl}}
+| −1.789
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| Hf
+| {{chem2|HfO(2+)}} + 2&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| [[Hafnium|Hf(s)]] + {{H2O-nl}}
+| −1.724
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| P
+| {{chem2|HPO_{3}(2–)}} + 2&nbsp;{{H2O-nl}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| P(s) + 5&nbsp;{{OH-|nolink=y}}
+| −1.71
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Si
+| {{chem2|link=Silicate|SiO_{3}(2–)}} + 3&nbsp;{{H2O-nl}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Si(s) + 6&nbsp;{{OH-|nolink=y}}
+| −1.697
+|4
+|class="noprint"|<ref name="CRC" />
+|-
+| Al
+| {{chem2|Al(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Aluminium|Al(s)]]
+| −1.662
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| Ti
+| {{chem2|Ti(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Titanium|Ti(s)]]
+| −1.63
+|2
+|class="noprint"|<ref name=Atk/>
+|-
+| Zr
+| {{chem2|link=Zirconium dioxide|ZrO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Zr(s) + 2&nbsp;{{H2O-nl}}
+| −1.553
+|4
+|class="noprint"|<ref name=van/>
+|-
+| Zr
+| {{chem2|Zr(4+)}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| [[Zirconium|Zr(s)]]
+| −1.45
+|4
+|class="noprint"|<ref name=van/>
+|-
+| Ti
+| {{chem2|Ti(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Ti(s)
+| −1.37
+|3
+|class="noprint"|<ref name=si/>
+|-
+| Ti
+| [[Titanium(II) oxide|TiO]](s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Ti(s) + {{H2O-nl}}
+| −1.31
+|2
+|class="noprint"|<ref name=AS5/>{{rp|792}}
+|-
+| B 
+| {{chem2|link=Tetrahydroxyborate|[B(OH)4]–}} + 4&nbsp;{{H2O-nl}} + 8&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|BH_{4}–}} + 8&nbsp;{{OH-|nolink=y}} 
+| −1.24 
+| 8 
+| class=noprint | <ref name=AS5/>{{rp|788}}
+|-
+| Ti
+| {{chem2|link=Titanium(III) oxide|Ti2O3}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;TiO(s) + {{H2O-nl}}
+| −1.23
+|2
+|class="noprint"|<ref name=AS5/>{{rp|792}}
+|-
+| Ga 
+| {{chem2|[Ga(OH)4]–}} + 3&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Ga(s) + 3&nbsp;{{OH-|nolink=y}} 
+| −1.22 
+| 3 
+| class=noprint | <ref name=AS5/>{{rp|788}}
+|-
+| Zn
+| {{chem2|[Zn(OH)4](2–)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Zn(s) + 4&nbsp;{{OH-|nolink=y}}
+| −1.199
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Mn
+| {{chem2|Mn(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Manganese|Mn(s)]]
+| −1.185
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Fe
+| {{chem2|link=Iron|[Fe(CN)6](4−)}} + 6&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Fe(s) + 6&nbsp;HCN(aq)
+| −1.16
+|2
+|class="noprint"|<ref name=webelements_fe>{{#invoke:cite|web|title=compounds information |work=Iron |publisher=WebElements Periodic Table of the Elements |url=http://www.webelements.com/iron/compounds.html}}</ref>
+|-
+| C 
+| C(s) + 3&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|CH3OH}}(l) + 2&nbsp;{{OH-|nolink=y}} 
+| −1.148 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|788}}
+|-
+| Cr 
+| {{chem2|[Cr(CN)6](3–)}} + e<sup>–</sup> 
+| ⇌ 
+| {{chem2|[Cr(CN)6](4–)}}
+| −1.143 
+| 1 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| Te
+| [[Tellurium|Te]](s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Te(2−)}}
+| −1.143
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| V
+| {{chem2|V(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Vanadium|V(s)]]
+| −1.13
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| Nb
+| {{chem2|Nb(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Niobium|Nb(s)]]
+| −1.099
+|3
+|class="noprint"|<ref name="van??"/>
+|-
+| Sn
+| Sn(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|SnH4}}(g)
+| −1.07
+|4
+|class="noprint"|
+|-
+| Po
+| [[Polonium|Po]](s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Po(2−)}}
+| −1.021
+|2
+|class="noprint"|<ref>{{#invoke:cite|book| last1=Brown | first1=Susan A. | last2=Brown | first2=Paul L. | title=The Aqueous Chemistry of Polonium and the Practical Application of its Thermochemistry | chapter=The pH-potential diagram for polonium | publisher=Elsevier | date=2020 | isbn=978-0-12-819308-2 | doi=10.1016/b978-0-12-819308-2.00004-8| s2cid=213141476 }}</ref>
+|-
+| Cr 
+| {{chem2|[Cr(edta)(H2O)]-}} + e<sup>–</sup> 
+| ⇌ 
+| {{chem2|[Cr(edta)(H2O)](2-)}} 
+| −0.99 
+| 1 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| P 
+| 2&nbsp;{{chem2|H3PO4}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|(H2PO3)2}}(aq) + {{H2O-nl}}
+| −0.933 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|789}}
+|-
+| C 
+| {{chem2|CO_{3}(2–)}} + 3&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|HCO_{2}–}} + {{H2O-nl}} 
+| −0.93 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|788}}
+|-
+| Ti
+| {{chem2|TiO(2+)}} + 2&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Ti(s) + {{H2O-nl}}
+| −0.93
+|4
+|class="noprint"|
+|-
+| Si
+| {{chem2|link=Silicon dioxide|SiO2}}([[quartz]]) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Si(s) + 2&nbsp;{{H2O-nl}}
+| −0.909
+|4
+|class="noprint"|<ref name=AS5/>{{rp|788}}
+|-
+| Cr 
+| {{chem2|Cr(2+)}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Cr(s) 
+| −0.9 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| B
+| {{chem2|link=Boric acid|B(OH)3}}(aq) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Boron|B(s)]] + 3&nbsp;{{H2O-nl}}
+| −0.89
+|3
+|class="noprint"| <ref name=AS5 />{{rp|788}}
+|-
+| Fe
+| {{chem2|Fe(OH)2}}(s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| Fe(s) + 2&nbsp;{{OH-|nolink=y}}
+| −0.89
+|2
+|class="noprint"|<ref name=webelements_fe/>
+|-
+| Fe
+| {{chem2|Fe2O3}}(s) + 3&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|Fe(OH)2}}(s) + 2&nbsp;{{OH-|nolink=y}}
+| −0.86
+|2
+|class="noprint"|<ref name=webelements_fe/>
+|-
+| '''H'''
+| '''2&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup>'''
+|⇌
+| '''{{chem2|H2}}(g) + 2&nbsp;{{OH-|nolink=y}}'''
+| '''−0.8277'''
+|'''2'''
+|class="noprint"|<ref name=van/>
+|-
+| Bi
+| Bi(s) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Bismuthine|BiH3}}
+| −0.8
+|3
+|class="noprint"|<ref name=van/>
+|-
+| Zn
+| {{chem2|Zn(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Zn(Hg)
+| −0.7628
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Zn
+| {{chem2|Zn(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Zinc|Zn(s)]]
+| −0.7618
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Ta
+|{{chem2|link=Tantalum pentoxide|Ta2O5}}(s) + 10&nbsp;{{H+|nolink=y}} + 10&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;Ta(s) + 5&nbsp;{{H2O-nl}}
+| −0.75
+|10
+|class="noprint"|
+|-
+| Cr
+| {{chem2|Cr(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Chromium|Cr(s)]]
+| −0.74
+|3
+|class="noprint"|<ref name=Atk/>
+|-
+| Te 
+| 2&nbsp;Te(s) + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|Te_{2}(2–)}}
+| −0.74 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|790}}
+|-
+|Ni
+| {{chem2|link=Nickel(II) hydroxide|Ni(OH)2}}(s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| Ni(s) + 2&nbsp;{{OH-|nolink=y}}
+| −0.72
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Nb 
+| {{chem2|link=Niobium pentoxide|Nb2O5}}(s) + 10&nbsp;{{H+|nolink=y}} + 10&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;Nb(s) + 5&nbsp;{{H2O-nl}}
+| −0.7 
+| 10 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| Ag
+| {{chem2|link=silver sulfide|Ag2S}}(s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;Ag(s) + {{chem2|link=Sulfur|S(2−)}}
+| −0.69
+|2
+|class="noprint"|
+|-
+| Te 
+| {{chem2|Te_{2}(2–)}} + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|H2Te}}(g) 
+| −0.64 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|790}}
+|-
+| Sb 
+| {{chem2|[Sb(OH)4]–}} + 3&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Sb(s) + 4&nbsp;{{OH-|nolink=y}} 
+| −0.639 
+| 3 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Au
+| {{chem2|[Au(CN)2]–}} + e<sup>–</sup>
+|⇌
+| Au(s) + 2&nbsp;{{chem2|CN−}}
+| −0.6
+|1
+|class="noprint"|
+|-
+| Ta
+| {{chem2|Ta(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Tantalum|Ta(s)]]
+| −0.6
+|3
+|class="noprint"|<ref name="van??"/>
+|-
+| Pb
+| [[Lead(II) oxide|PbO]](s) + {{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Pb(s) + 2&nbsp;{{OH-|nolink=y}}
+| −0.580
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| Ti
+| 2&nbsp;{{chem2|TiO2}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Ti2O3}}(s) + {{H2O-nl}}
+| −0.56
+|2
+|class="noprint"|<ref name=AS5/>{{rp|792}}
+|-
+| Ga
+| {{chem2|Ga(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Gallium|Ga(s)]]
+| −0.549
+|3
+|class="noprint"|<ref name="van??"/>
+|-
+| U
+| {{chem2|U(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|U(3+)}}
+| −0.52
+|1
+|class="noprint"|<ref name=Bar2/>
+|-
+| P
+| {{chem2|link=Hypophosphorous acid|H3PO2}}(aq) + {{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| P(white)<ref name=rwP group=note /> + 2&nbsp;{{H2O-nl}}
+| −0.508
+|1
+|class="noprint"|<ref name=van/>
+|-
+| P
+| {{chem2|H3PO3}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H3PO2}}(aq) + {{H2O-nl}}
+| −0.499
+|2
+|class="noprint"|<ref name=van/>
+|-
+|Ni
+| {{chem2|NiO2}}(s) + 2&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Nickel(II) hydroxide|Ni(OH)2}}(s) + 2&nbsp;{{OH-|nolink=y}}
+| −0.49
+|2
+|class="noprint"|<ref name="CRC" />
+|-
+| Sb 
+| {{chem2|[Sb(OH)6]–}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|[Sb(OH)4]–}} + 2&nbsp;{{OH-|nolink=y}} 
+| −0.465 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| P
+| {{chem2|link=Phosphorous acid|H3PO3}}(aq) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| P(red)<ref name=rwP group=note /> + 3&nbsp;{{H2O-nl}}
+| −0.454
+|3
+|class="noprint"|<ref name=van/>
+|-
+| Bi 
+| {{chem2|Bi2O3}}(s) + 3&nbsp;{{H2O-nl}} + 6&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Bi(s) + 6&nbsp;{{OH-|nolink=y}} 
+| −0.452 
+| 6 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Ta 
+| {{chem2|TaF_{7}(2–)}} + 7&nbsp;{{H+|nolink=y}} + 5&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Ta(s) + 7&nbsp;HF(l) 
+| −0.45 
+| 5 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| In 
+| {{chem2|In(3+)}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|In+}} 
+| −0.444 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|788}}
+|-
+|Cu
+| {{chem2|[Cu(CN)2]–}} + e<sup>–</sup>
+|⇌
+| Cu(s) + 2&nbsp;{{chem2|CN-}}
+| −0.44
+|1
+|class="noprint"|<ref name="Bar" />
+|-
+| Fe
+| {{chem2|link=Iron|Fe(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Fe(s)
+| −0.44
+|2
+|class="noprint"|<ref name=Atk/>
+|-
+| C
+| 2&nbsp;{{CO2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Oxalic acid|HOOCCOOH]](aq)
+| −0.43
+|2
+|class="noprint"|
+|-
+| Cr
+| {{chem2|Cr(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Cr(2+)}}
+| −0.407
+|1
+|class="noprint"|<ref name="van??"/>
+|-
+| Cd
+| {{chem2|Cd(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Cadmium|Cd(s)]]
+| −0.4
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| Ti 
+| {{chem2|Ti(3+)}} + e<sup>–</sup> 
+| ⇌ 
+| {{chem2|Ti(2+)}} 
+| −0.37 
+| 1 
+| class=noprint | <ref name=AS5/>{{rp|792}}
+|-
+| Cu
+| {{chem2|link=Copper(I) oxide|Cu2O}}(s) + {{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;Cu(s) + 2&nbsp;{{OH-|nolink=y}}
+| −0.36
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Pb
+| {{chem2|link=Lead(II) sulfate|PbSO4}}(s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| Pb(s) + {{chem2|SO_{4}(2−)}}
+| −0.3588
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Pb
+| {{chem2|PbSO4}}(s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| Pb(Hg) + {{chem2|SO_{4}(2−)}}
+| −0.3505
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Eu
+| {{chem2|link=Europium|Eu(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Eu(2+)}}
+| −0.35
+|1
+|class="noprint"|<ref name=Bar2/>
+|-
+| In
+| {{chem2|In(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Indium|In(s)]]
+| −0.34
+|3
+|class="noprint"|<ref name=Bar/>
+|-
+| Tl
+| {{chem2|Tl+}} + e<sup>–</sup>
+|⇌
+| [[Thallium|Tl(s)]]
+| −0.34
+|1
+|class="noprint"|<ref name=Bar/>
+|-
+| Ge
+| [[Germanium|Ge(s)]] + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|GeH4}}(g)
+| −0.29
+|4
+|class="noprint"|
+|-
+| Co
+| {{chem2|Co(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Cobalt|Co(s)]]
+| −0.28
+|2
+|class="noprint"|<ref name=van/>
+|-
+| P
+| {{chem2|link=Phosphoric acid|H3PO4}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H3PO3}}(aq) + {{H2O-nl}}
+| −0.276
+|2
+|class="noprint"|<ref name=van/>
+|-
+| N 
+| {{chem2|N2}}(g) + 8&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|NH_{4}+}} 
+| 0.27 
+| 6 
+| class=noprint | <ref name=Lee />
+|-
+| V
+| {{chem2|V(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|V(2+)}}
+| −0.26
+|1
+|class="noprint"|<ref name=Atk/>
+|-
+| Ni
+| {{chem2|Ni(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Nickel|Ni(s)]]
+| −0.257
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| S 
+| 2&nbsp;{{chem2|HSO_{4}–}} + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|S2O_{6}(2–)}} + 2&nbsp;{{H2O-nl}}
+| −0.253 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|790}}
+|-
+| As
+| [[Arsenic|As]](s) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Arsine|AsH3}}(g)
+| −0.23
+|3
+|class="noprint"|<ref name=Bar/>
+|-
+| N 
+| {{chem2|N2}}(g) + 5&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|N2H_{5}+}}  
+| −0.23 
+| 4 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Ga
+| {{chem2|Ga+}} + e<sup>–</sup>
+|⇌
+| Ga(s)
+| −0.2
+|1
+|class="noprint"|<ref name="van??"/>
+|-
+| Ag
+| [[Silver iodide|AgI]](s) + e<sup>–</sup>
+|⇌
+| Ag(s) + {{chem2|I-}}
+| −0.15224
+|1
+|class="noprint"|<ref name=van/>
+|-
+| Ge 
+| {{chem2|GeO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Ge(s) + 2&nbsp;{{H2O-nl}}
+| −0.15 
+| 4 
+| class="noprint" | <ref name=Lee />
+|-
+| Mo
+| {{chem2|link=Molybdenum dioxide|MoO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Mo(s) + 2&nbsp;{{H2O-nl}}
+| −0.15
+|4
+|class="noprint"|
+|-
+| Si
+| [[Silicon|Si]](s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|SiH4}}(g)
+| −0.14
+|4
+|class="noprint"|
+|-
+| Sn
+| {{chem2|Sn(2+) + 2 e-}}
+|⇌
+| [[Tin|Sn(s)]]
+| −0.13
+|2
+|class="noprint"|
+|-
+| O
+| {{chem2|O2(g) + H+ + e-}}
+|⇌
+| {{chem|HO|2|•}}(aq)
+| −0.13
+|1
+|class="noprint"|
+|-
+| In 
+| {{chem2|In+ + e-}}
+| ⇌ 
+| In(s) 
+| −0.126 
+| 1 
+| class=noprint | <ref name=AS5 />{{rp|788}}
+|-
+| Pb
+| {{chem2|Pb(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Lead|Pb(s)]]
+| −0.126
+|2
+|class="noprint"|<ref name=Atk/>
+|-
+| W
+| {{chem2|link=Tungsten(IV) oxide|WO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| [[Tungsten|W]](s) + 2&nbsp;{{H2O-nl}}
+| −0.12
+|4
+|class="noprint"|
+|-
+| Ge
+| {{chem2|link=Germanium dioxide|GeO2}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| GeO(s) + {{H2O-nl}}
+| −0.118
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| P
+| [[Phosphorus|P]](red) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Phosphine|PH3}}(g)
+| −0.111
+|3
+|class="noprint"|<ref name=van/>
+|-
+| C
+| {{CO2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Formic acid|HCOOH]](aq)
+| −0.11
+|2
+|class="noprint"|
+|-
+| Se
+| [[Selenium|Se]](s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H2Se}}(g)
+| −0.11
+|2
+|class="noprint"|<ref name=AS5/>{{rp|790}}
+|-
+| C
+| {{CO2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| CO(g) + {{H2O-nl}}
+| −0.11
+|2
+|class="noprint"|
+|-
+| Sn 
+| &alpha;-[[Tin(II) oxide|SnO]](s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Sn(s) + {{H2O-nl}} 
+| −0.104 
+| 2 
+| class="noprint" | <ref name=AS5 />{{rp|788}}
+|-
+|Cu
+| {{chem2|[Cu(NH3)2]+}} + e<sup>–</sup>
+|⇌
+|Cu(s) + 2&nbsp;{{chem2|NH3}}(aq)
+| −0.1
+|1
+|class="noprint"|<ref name="Bar" />
+|-
+| Nb 
+| {{chem2|Nb2O5}}(s) + 10&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|Nb(3+)}} + 5&nbsp;{{H2O-nl}}
+| −0.1 
+| 4 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| W
+| {{chem2|link=Tungsten(VI) oxide|WO3}}(aq) + 6&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| W(s) + 3&nbsp;{{H2O-nl}}
+| −0.09
+|6
+|class="noprint"|<ref name=Bar/>
+|-
+| Sn
+| {{chem2|link=Tin dioxide|SnO2}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| &alpha;-SnO(s) + {{H2O-nl}}
+| −0.088
+|2
+|class="noprint"| <ref name=AS5 />{{rp|788}}
+|-
+| Fe
+| {{chem2|link=Magnetite|Fe3O4}}(s) + 8&nbsp;{{H+|nolink=y}} + 8&nbsp;e<sup>–</sup>
+|⇌
+| 3&nbsp;Fe(s) + 4&nbsp;{{H2O-nl}}
+| −0.085
+|8
+|class="noprint"|<ref name=Pou/>
+|-
+| V 
+| {{chem2|VOH(2+)}} + {{H+|nolink=y}} + e<sup>–</sup> 
+| ⇌ 
+| {{chem2|V(2+)}} + {{H2O-nl}}
+| −0.082 
+| 1 
+| class=noprint | <ref name=AS5 />{{rp|793}}
+|-
+| P
+| [[Phosphorus|P]](white) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Phosphine|PH3}}(g)
+| −0.063
+|3
+|class="noprint"|<ref name=van/>
+|-
+| N 
+| {{chem2|N2O}}(g) + {{H2O-nl}} + 6&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|NH3OH+}} 
+| −0.05 
+| 4 
+| class=noprint | <ref name=AS5/>{{rp|789}}
+|-
+| Fe
+| {{chem2|Fe(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Fe(s)
+| −0.04
+|3
+|class="noprint"|<ref name=webelements_fe/>
+|-
+| C
+| [[Formic acid|HCOOH]](aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Formaldehyde|HCHO]](aq) + {{H2O-nl}}
+| −0.034
+|2
+|class="noprint"| <ref name=AS5 />{{rp|788}}
+|- style="background-color:#d0d0FF; font-weight: bold"
+| H
+| 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H2}}(g)
+|  0
+|2
+| class="noprint" |
+|-
+| Ag
+| [[Silver bromide|AgBr]](s) + e<sup>–</sup>
+|⇌
+| Ag(s) + {{chem2|Br-}}
+| 0.07133
+|1
+|class="noprint"|<ref name=van/>
+|-
+| S
+| {{chem2|link=Tetrathionate|S4O_{6}(2−)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Thiosulfate|S2O_{3}(2−)}}
+| 0.08
+|2
+|class="noprint"|
+|-
+| N
+| {{chem2|link=Nitrogen|N2}}(g) + 2&nbsp;{{H2O-nl}} + 6&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Ammonium hydroxide|NH4OH}}(aq)
+| 0.092
+|6
+|class="noprint"|
+|-
+| Hg
+| [[Mercury(II) oxide|HgO]](s) + {{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Hg(l) + 2&nbsp;{{OH-|nolink=y}}
+| 0.0977
+|2
+|class="noprint"|
+|-
+| Cu
+| {{chem2|[Cu(NH3)4](2+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|[Cu(NH3)2]+}} + 2&nbsp;{{chem2|NH3}}(aq)
+| 0.1
+|1
+|class="noprint"|<ref name=Bar/>
+|-
+| Ru
+| {{chem2|link=Ruthenium|[Ru(NH3)6](3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|[Ru(NH3)6](2+)}}
+| 0.1
+|1
+|class="noprint"|<ref name=Bar2/>
+|-
+| N
+| {{chem2|link=Hydrazine|N2H4}}(aq) + 4&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|NH_{4}+}} + 4&nbsp;{{OH-|nolink=y}}
+| 0.11
+|2
+|class="noprint"|<ref name=Gre/>
+|-
+| Mo
+| {{chem2|link=Molybdic acid|H2MoO4}}(aq) + 6&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| Mo(s) + 4&nbsp;{{H2O-nl}}
+| 0.11
+|6
+|class="noprint"|
+|-
+| Ge
+| {{chem2|Ge(4+)}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Ge(s)
+| 0.12
+|4
+|class="noprint"|
+|-
+| C
+| [[Carbon|C]](s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Methane|CH4}}(g)
+| 0.13
+|4
+|class="noprint"|<ref name=Bar/>
+|-
+| C
+| [[Formaldehyde|HCHO]](aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Methanol|CH3OH}}(aq)
+| 0.13
+|2
+|class="noprint"|
+|-
+| S
+| [[Sulfur|S]](s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H2S}}(g)
+| 0.144
+|2
+|class="noprint"|<ref name=AS5/>{{rp|790}}
+|-
+| Sb 
+| {{chem2|Sb2O3}}(s) + 6&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;Sb(s) + 3&nbsp;{{H2O-nl}} 
+| 0.15 
+| 6 
+| <ref name=AS5 />{{rp|789}}
+|-
+| Sn
+| {{chem2|Sn(4+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Sn(2+)}}
+| 0.151
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| S
+| {{chem2|HSO_{4}–}} + 3&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|SO2}}(aq) + 2&nbsp;{{H2O-nl}}
+| 0.158
+|2
+|class="noprint"|<ref name=AS5/>{{rp|790}}
+|-
+| Cu
+| {{chem2|Cu(2+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Cu+}}
+| 0.159
+|1
+|class="noprint"|<ref name=Bar/>
+|-
+| U
+| {{chem2|link=Uranyl|UO_{2}(2+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|UO_{2}+}} 
+| 0.163
+|1
+|class="noprint"|<ref name=Bar2/>
+|-
+| S
+| {{chem2|SO_{4}(2–)}} + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|SO2}}(aq) + 2&nbsp;{{H2O-nl}}
+| 0.17
+|2
+|class="noprint"|
+|-
+| Ti
+| {{chem2|TiO(2+)}} + 2&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|Ti(3+)}} + {{H2O-nl}}
+| 0.19
+|1
+|class="noprint"|
+|-
+| Sb
+| {{chem2|SbO+}} + 2&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Sb(s) + {{H2O-nl}}
+| 0.2
+|3
+|class="noprint"|
+|-
+| Fe
+| 3&nbsp;{{chem2|link=Hematite|Fe2O3}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Magnetite|Fe3O4}}(s) + {{H2O-nl}}
+| 0.22
+|2
+|class="noprint"|<ref name=Pang2007/>{{rp|p.100}}
+|-
+| Ag
+| [[Silver chloride|AgCl]](s) + e<sup>–</sup>
+|⇌
+| Ag(s) + {{chem2|Cl-}}
+| 0.22233
+|1
+|class="noprint"|<ref name=van/>
+|-
+| As
+| {{chem2|link=Arsenous acid|H3AsO3}}(aq) + 3&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| As(s) + 3&nbsp;{{H2O-nl}}
+| 0.24
+|3
+|class="noprint"| <ref name=AS5 />{{rp|789}}
+|-
+| Ru
+| {{chem2|Ru(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Ru(2+)}}
+| 0.249
+|1
+|class="noprint"|<ref name=Greenwood1077 />
+|-
+| Pb 
+| {{chem2|PbO2}}(s) + {{H2O-nl}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| &alpha;-{{chem2|PbO}}(s) + 2&nbsp;{{OH-|nolink=y}} 
+| 0.254 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|788}}
+|-
+| Ge
+| GeO(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Ge(s) + {{H2O-nl}}
+| 0.26
+|2
+|class="noprint"|
+|-
+| Hg 
+| {{chem2|Hg2Cl2}}(s) + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;Hg(l) + 2&nbsp;{{chem2|Cl-}} 
+| 0.27 
+| 2 
+| class=noprint | <ref name=Lee />
+|-
+| U
+| {{chem2|UO_{2}+}}  + 4&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|U(4+)}} + 2&nbsp;{{H2O-nl}}
+| 0.273
+|1
+|class="noprint"|<ref name=Bar2/>
+|-
+| At
+| At + e<sup>–</sup>
+|⇌
+| {{chem2|At-}}
+|0.3
+|1
+|class="noprint"|<ref name=":0">{{#invoke:cite|book| last1=Lavrukhina | first1=Avgusta Konstantinovna | last2=Pozdni︠a︡kov | first2=Aleksandr Aleksandrovich | title=Analytical chemistry of technetium, promethium, astatine and francium | publisher=Ann Arbor-Humphrey Science Publishers | publication-place=Ann Arbor | date=1970 | isbn=0-250-39923-7 | oclc=186926 |page=237}}</ref>
+|-
+| Bi
+| {{chem2|Bi(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Bismuth|Bi(s)]]
+| 0.308
+|3
+|class="noprint"|<ref name=van/>
+|-
+| C
+| 2&nbsp;HCNO + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|(CN)2}} + 2&nbsp;{{H2O-nl}}
+| 0.330
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| Cu
+| {{chem2|Cu(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Copper|Cu(s)]]
+| 0.337
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| V
+| {{chem2|VO(2+)}} + 2&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|V(3+)}} + {{H2O-nl}}
+| 0.337
+|1
+|class="noprint"|<ref name=AS5/>{{rp|793}}
+|-
+| Sb 
+| {{chem2|Sb2O4}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|Sb2O3}}(s) + {{H2O-nl}}
+| 0.342 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| At
+| {{chem2|At+}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|At−}}
+| 0.36
+|2
+|class="noprint"|<ref name=":2">{{#invoke:cite|journal| last1=Champion | first1=J. | last2=Alliot | first2=C. | last3=Renault | first3=E. | last4=Mokili | first4=B. M. | last5=Chérel | first5=M. | last6=Galland | first6=N. | last7=Montavon | first7=G. | title=Astatine Standard Redox Potentials and Speciation in Acidic Medium | journal=The Journal of Physical Chemistry A | publisher=American Chemical Society (ACS) | volume=114 | issue=1 | date=2009-12-16 | issn=1089-5639 | doi=10.1021/jp9077008 | pages=576–582| pmid=20014840 | s2cid=15738065 | url=http://hal.in2p3.fr/in2p3-00450771/file/JPCA_2010.pdf }}</ref>
+|-
+| Fe
+| {{chem2|[Fe(CN)6](3–)}} + e<sup>–</sup>
+|⇌
+| {{chem2|[Fe(CN)6](4–)}}
+|  0.3704
+|1
+|class="noprint"|<ref>{{#invoke:cite|journal|last=Rock|first=Peter A.|date=February 1966|title=The Standard Oxidation Potential of the Ferrocyanide-Ferricyanide Electrode at 25° and the Entropy of Ferrocyanide Ion|journal=The Journal of Physical Chemistry|volume=70|issue=2|pages=576–580|doi=10.1021/j100874a042|issn=0022-3654}}</ref>
+|-
+| C
+| {{chem2|link=Cyanogen|(CN)2}} + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;[[hydrocyanic acid|HCN]]
+| 0.373
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| P 
+| {{chem2|(H2PO3)2}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|H3PO3}} 
+| 0.38 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| S 
+| 2&nbsp;{{chem2|SO2}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|S2O_{3}(2–)}} + {{H2O-nl}}
+| 0.4 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|790}}
+|-
+| '''O'''
+| '''{{chem2|O2}}(g) + 2&nbsp;{{H2O-nl}} + 4&nbsp;e<sup>–</sup>'''
+|⇌
+| '''4&nbsp;{{OH-|nolink=y}}'''
+| '''0.401'''
+|'''4'''
+|class="noprint"|<ref name=Atk/>
+|-
+| Mo
+| {{chem2|H2MoO4}} + 6&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Mo(3+)}} + 4&nbsp;{{H2O-nl}}
+| 0.43
+|3
+|class="noprint"|
+|-
+| Ru
+| {{chem2|Ru(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Ruthenium|Ru}}(s)
+| 0.455
+|2
+|class="noprint"|<ref name=Greenwood1077>Greenwood and Earnshaw, p. 1077</ref>
+|-
+| V 
+| {{chem2|VO(OH)+}} + 2&nbsp;{{H+|nolink=y}} + e<sup>–</sup> 
+| ⇌ 
+| {{chem2|VOH(2+)}} + {{H2O-nl}}
+| 0.481 
+| 1 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| Re
+| {{chem2|Re(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Rhenium|Re(s)]]
+| 0.5
+|3
+| class="noprint" |<ref name="VanSrc" />
+|-
+| C
+| {{chem2|link=Methanol|CH3OH}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Methane|CH4}}(g) + {{H2O-nl}}
+| 0.5
+|2
+|class="noprint"|
+|-
+| S
+| {{chem2|SO2}}(aq) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| S(s) + 2&nbsp;{{H2O-nl}}
+| 0.5
+|4
+|class="noprint"|<ref name=AS5/>{{rp|790}}
+|-
+| S 
+| 4&nbsp;{{chem2|SO2}}(aq) + 4&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|S4O_{6}(2–)}} + 2&nbsp;{{H2O-nl}} 
+| 0.51 
+| 6 
+| class=noprint | <ref name=Lee />
+|-
+| Cu
+| {{chem2|Cu+}} + e<sup>–</sup>
+|⇌
+| Cu(s)
+| 0.52
+|1
+|class="noprint"|<ref name=Bar/>
+|-
+| C
+| [[Carbon monoxide|CO]](g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| C(s) + {{H2O-nl}}
+| 0.52
+|2
+|class="noprint"| <ref name=AS5 />{{rp|788}}
+|-
+| I
+| {{chem2|link=Triiodide|I_{3}–}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 3&nbsp;{{chem2|I-}}
+| 0.53
+|2
+|class="noprint"|<ref name=Atk/>
+|-
+| Te 
+| {{chem2|TeO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| Te(s) + 2&nbsp;{{H2O-nl}}
+| 0.53 
+| 4 
+| class=noprint | <ref name=AS5 />{{rp|790}}
+|-
+| Cu 
+| {{chem2|Cu(2+)}} + {{chem2|Cl-}} + e<sup>–</sup> 
+| ⇌ 
+| {{chem2|CuCl}}(s) 
+| 0.54 
+| 1 
+| class=noprint | <ref name=Lee />
+|-
+| I
+| {{chem2|link=Iodine|I2}}(s) + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|I-}}
+| 0.54
+|2
+|class="noprint"|<ref name=Atk/>
+|-
+| Au
+| {{chem2|AuI_{4}–}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Au(s) + 4&nbsp;{{chem2|I-}}
+| 0.56
+|3
+|class="noprint"|
+|-
+| As
+| {{chem2|link=Arsenic acid|H3AsO4}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H3AsO3}}(aq) + {{H2O-nl}}
+| 0.56
+|2
+|class="noprint"|<ref name=AS5 />{{rp|789}}
+|-
+| S 
+| {{chem2|S2O_{6}(2–)}} + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|H2SO3}} 
+| 0.569 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|790}}
+|-
+| Au
+| {{chem2|AuI_{2}–}} + e<sup>–</sup>
+|⇌
+| Au(s) + 2&nbsp;{{chem2|I-}}
+| 0.58
+|1
+|class="noprint"|
+|-
+| Mn
+| {{chem2|MnO_{4}-}} + 2&nbsp;{{H2O-nl}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|MnO2}}(s) + 4&nbsp;{{OH-|nolink=y}}
+|  0.595
+|3
+|class="noprint"|<ref name="CRC" />
+|-
+| S
+| {{chem2|S2O_{3}(2–)}} + 6&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;S(s) + 3&nbsp;{{H2O-nl}}
+| 0.6
+|4
+|class="noprint"| <ref name=AS5/>{{rp|790}}
+|-
+| Fe 
+| {{chem2|link=Ferrocene|Fc+}} + e<sup>–</sup> 
+| ⇌ 
+| Fc(s) 
+| 0.63 
+| 1 
+| class="noprint" | Substantial literature variation<ref>{{#invoke:cite|journal|first1=Vitaly&nbsp;V.|last1=Pavlishchuk|first2=Anthony&nbsp;W.|last2=Addison|periodical=Inorganica Chimica Acta|title=Conversion constants for redox potentials measured versus different reference electrodes in acetonitrile solutions at 25°C|volume=298|issue=1|pages=97–102|date=January 2000 |doi=10.1016/S0020-1693(99)00407-7}}</ref>
+|-
+| Mo
+| {{chem2|link=Molybdic acid|H2MoO4}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|MoO2}}(s) + 2&nbsp;{{H2O-nl}}
+| 0.65
+|2
+|class="noprint"|
+|-
+| N 
+| {{chem2|HN3}}(aq) + 11&nbsp;{{H+|nolink=y}} + 8&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 3&nbsp;{{chem2|NH_{4}+}} 
+| 0.69 
+| 8 
+| class=noprint | <ref name=Lee />
+|-
+| O
+| {{chem2|O2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Hydrogen Peroxide|H2O2}}(aq)
+| 0.695
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| Sb 
+| {{chem2|Sb2O5}}(s) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|Sb2O3}}(s) + 2&nbsp;{{H2O-nl}} 
+| 0.699 
+| 4 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| C
+| [[File:1,4-Benzochinon.svg|70px|link=p-Benzoquinone]] + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[File:Hydrochinon2.svg|110px|link=Hydroquinone]]
+| 0.6992
+|2
+|class="noprint"|<ref name=van/>
+|-
+| V 
+| {{chem2|H2V10O_{28}(4–)}} + 24&nbsp;{{H+|nolink=y}} + 10&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 10&nbsp;{{chem2|VO(OH)+}} + 8&nbsp;{{H2O-nl}} 
+| 0.723 
+| 10 
+| class=noprint | <ref name=AS5/>{{rp|793}}
+|-
+| Pt
+| {{chem2|PtCl_{6}(2–)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|PtCl_{4}(2–)}} + 2&nbsp;{{chem2|Cl-}}
+| 0.726
+|2
+|class="noprint"|<ref name=Bar2/>
+|-
+| Fe
+| {{chem2|link=Hematite|Fe2O3}}(s) + 6&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Ferrous|Fe(2+)}} + 3&nbsp;{{H2O-nl}}
+| 0.728
+|2
+|class="noprint"|<ref name=Pang2007/>{{rp|p.100}}
+|-
+| Se
+| {{chem2|link=Selenous acid|H2SeO3}}(aq) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Se(s) + 3&nbsp;{{H2O-nl}}
+| 0.74
+|4
+|class="noprint"|<ref name="van??"/>
+|-
+| At
+| {{chem2|AtO+}}  + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+|{{chem2|At+}}  + {{H2O-nl}}
+| 0.74
+|2
+|class="noprint"|<ref name=":2"/>
+|-
+| Tl
+| {{chem2|Tl(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Thallium|Tl(s)]]
+| 0.741
+|3
+|class="noprint"|<ref name="van??"/>
+|-
+| No
+| {{chem2|No(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|No(2+)}}
+| 0.75
+|1
+|class="noprint"|<ref>{{#invoke:cite|journal|last1=Toyoshima |first1=A. |last2=Kasamatsu |first2=Y. |first3=K. |last3=Tsukada |first4=M. |last4=Asai |first5=Y. |last5=Kitatsuji |first6=Y. |last6=Ishii |first7=H. |last7=Toume |first8=I. |last8=Nishinaka |first9=H. |last9=Haba |first10=K. |last10=Ooe |first11=W. |last11=Sato |first12=A. |last12=Shinohara |first13=K. |last13=Akiyama |first14=Y. |last14=Nagame |date=8 July 2009 |title=Oxidation of element 102, nobelium, with flow electrolytic column chromatography on an atom-at-a-time scale |journal=Journal of the American Chemical Society |volume=131 |issue=26 |pages=9180–1 |doi=10.1021/ja9030038 |pmid=19514720 |bibcode=2009JAChS.131.9180T |url=https://figshare.com/articles/Oxidation_of_Element_102_Nobelium_with_Flow_Electrolytic_Column_Chromatography_on_an_Atom_at_a_Time_Scale/2844817 }}</ref>
+|-
+| Pt
+| {{chem2|PtCl_{4}(2–)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Pt(s) + 4&nbsp;{{chem2|Cl-}}
+| 0.758
+|2
+|class="noprint"|<ref name=Bar2/>
+|-
+| Br 
+| {{chem2|BrO-}} + {{H2O-nl}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|Br-}} + 2&nbsp;{{OH-|nolink=y}} 
+| 0.76 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|791}}
+|-
+| Po
+| {{chem2|Po(4+)}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| Po(s)
+| 0.76
+|4
+|class="noprint"|<ref name="van??"/>
+|-
+| S
+| {{chem2|link=Thiocyanogen|(SCN)2}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Thiocyanate|SCN−}}
+| 0.769
+|2
+|class="noprint"|<ref>{{#invoke:cite|journal|journal=Archiv der Pharmazie und Berichte der Deutschen Pharmazeutischen Gesellschaft|volume=263|year=1925|via=[[HathiTrust]]|pages=675–721|url=https://babel.hathitrust.org/cgi/pt?id=uc1.b3706518|first=H.&nbsp;P.|last=Kaufmann|title=Das freie Rhodan und seine Anwendung in der Maßanalyse. Eine neue Kennzahl der Fette|issue=41–47 |doi=10.1002/ardp.19252634104 |lang=de|trans-title=Unbound rhodanium and its application to elemental analysis: A new measurement technique for fats}}</ref><ref name="van??"/>
+|-
+| Fe
+| {{chem2|Fe(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Fe(2+)}}
+| 0.771
+|1
+|class="noprint"|<ref name="van??"/>
+|-
+| Hg
+| {{chem2|Hg_{2}(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;Hg(l)
+| 0.7973
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| Ag
+| {{chem2|Ag+}} + e<sup>–</sup>
+|⇌
+| [[Silver|Ag(s)]]
+| 0.7996
+|1
+|class="noprint"|<ref name=van/>
+|-
+| N
+| 2&nbsp;{{chem2|link=Nitrate|NO_{3}–}} + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Nitrogen dioxide|N2O4}}(g) + 2&nbsp;{{H2O-nl}}
+| 0.803
+|2
+|class="noprint"| <ref name=AS5 />{{rp|789}}
+|-
+| Fe
+| 2&nbsp;{{chem2|link=Ferrate|FeO_{4}(2–)}} + 5&nbsp;{{H2O-nl}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Fe2O3}}(s) + 10&nbsp;{{OH-|nolink=y}}
+| 0.81
+|6
+|class="noprint"|<ref name=webelements_fe/>
+|-
+| Au
+| {{chem2|AuBr_{4}–}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Au(s) + 4&nbsp;{{chem2|Br-}}
+| 0.85
+|3
+|class="noprint"|
+|-
+| Hg
+| {{chem2|Hg(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Mercury (element)|Hg(l)]]
+| 0.85
+|2
+|class="noprint"|
+|-
+| Ir
+| {{chem2|IrCl_{6}(2–)}} + e<sup>–</sup>
+|⇌
+| {{chem2|IrCl_{6}(3–)}}
+| 0.87
+|1
+|class="noprint"|<ref name=AS5 />{{rp|153}}
+|-
+| Mn
+| {{chem2|MnO_{4}–}} + {{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|HMnO_{4}–}}
+| 0.9
+|1
+|class="noprint"|
+|-
+|Po
+|{{chem2|Po(4+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+|{{chem2|Po(2+)}}
+|0.9
+|2
+|class="noprint"|<ref name="van??"/>
+|-
+| Hg
+| 2&nbsp;{{chem2|Hg(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Hg_{2}(2+)}}
+| 0.91
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| Pd
+| {{chem2|Pd(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Palladium|Pd(s)]]
+| 0.915
+|2
+|class="noprint"|<ref name=Bar2/>
+|-
+| Au
+| {{chem2|AuCl_{4}–}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| Au(s) + 4&nbsp;{{chem2|Cl-}}
+| 0.93
+|3
+|class="noprint"|
+|-
+| N 
+| {{chem2|NO_{3}–}} + 3&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|HNO2}}(aq) 
+| 0.94 
+| 2 
+| class=noprint | <ref name=AS5/>{{rp|789}}
+|-
+| Mn
+| {{chem2|MnO2}}(s) + 4&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|Mn(3+)}} + 2&nbsp;{{H2O-nl}}
+| 0.95
+|1
+|class="noprint"|
+|-
+| N
+| {{chem2|link=Nitrate|NO_{3}–}} + 4&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Nitrogen monoxide|NO}}(g) + 2&nbsp;{{H2O-nl}}
+|0.958
+|3
+|class="noprint"|<ref name="Atk" />
+|-
+| Au
+| {{chem2|AuBr_{2}–}} + e<sup>–</sup>
+|⇌
+| Au(s) + 2&nbsp;{{chem2|Br-}}
+| 0.96
+|1
+|class="noprint"|
+|-
+| Fe
+| {{chem2|link=Magnetite|Fe3O4}}(s) + 8&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 3&nbsp;{{chem2|link=Ferrous|Fe(2+)}} + 4&nbsp;{{H2O-nl}}
+| 0.98
+|2
+|class="noprint"|<ref name=Pang2007/>{{rp|p.100}}
+|-
+| Xe
+| {{chem2|HXeO_{6}(3–)}} + 2&nbsp;{{H2O-nl}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|HXeO_{4}–}} + 4&nbsp;{{OH-|nolink=y}}
+| 0.99
+|2
+|class="noprint"|<ref name=AS5/>{{rp|792}}<ref name=webelements_xe>{{#invoke:cite|web|title=compounds information |work=Xenon |publisher=WebElements Periodic Table of the Elements |url=http://www.webelements.com/xenon/compounds.html}}</ref>
+|-
+| N 
+| {{chem2|HNO2}}(aq) + {{H+|nolink=y}} + e<sup>–</sup> 
+| ⇌ 
+| NO(g) + {{H2O-nl}}
+| 0.996 
+| 1 
+| class=noprint | <ref name=AS5/>{{rp|789}}
+|-
+| At
+| HAtO + {{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| At + {{H2O-nl}}
+|1.0
+|1
+|class="noprint"|<ref name=":0"/>
+|-
+| V
+| {{chem2|VO_{2}+}} + 2&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|link=Vanadyl ion|VO(2+)}} + {{H2O-nl}}
+| 1
+|1
+|class="noprint"|<ref name = "Cotton">{{Cotton&Wilkinson6th}}.</ref>
+|-
+| Te
+| {{chem2|link=Telluric acid|H6TeO6}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|TeO2}}(s) + 4&nbsp;{{H2O-nl}}
+| 1.02
+|2
+|class="noprint"|<ref name = "Cotton">{{Cotton&Wilkinson6th}}.</ref>
+|-
+| N 
+| {{chem2|NO2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| NO(g) + {{H2O-nl}}
+| 1.03 
+| 2 
+| class=noprint | <ref name=Lee />
+|-
+| Br 
+| {{chem2|Br_{3}–}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 3&nbsp;{{chem2|Br-}} 
+| 1.05 
+| 2 
+| class=noprint | <ref name=Lee />
+|-
+| Sb 
+| {{chem2|Sb2O5}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|Sb2O4}}(s) + {{H2O-nl}}
+| 1.055 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| I 
+| {{chem2|ICl_{2}–}} + e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|Cl-}} + I(s) 
+| 1.06 
+| 1 
+| class=noprint | <ref name=Lee />
+|-
+| Br
+| {{chem2|link=Bromine|Br2}}(l) + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|Br-}}
+| 1.066
+|2
+|class="noprint"|<ref name=van/>
+|-
+| N 
+| {{chem2|N2O4}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|HNO2}} 
+| 1.07 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Br
+| {{chem2|Br2}}(aq) + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|Br-}}
+| 1.0873
+|2
+|class="noprint"|<ref name=van/>
+|-
+| Ru
+| {{chem2|RuO2}} + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Ru(2+)}} + 2&nbsp;{{H2O-nl}}
+| 1.120
+|2
+|class="noprint"|<ref name=Greenwood1077 />
+|-
+|Cu
+| {{chem2|Cu(2+)}} + 2&nbsp;{{chem2|CN-}} + e<sup>–</sup>
+|⇌
+| {{chem2|Cu(CN)_{2}–}}
+| 1.12
+|1
+|class="noprint"|<ref name="Bar" />
+|-
+| I
+| {{chem2|IO_{3}–}} + 5&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| HIO(aq) + 2&nbsp;{{H2O-nl}}
+| 1.13
+|4
+|class="noprint"|<ref name=AS5/>{{rp|791}}
+|-
+| O 
+| {{chem2|H2O2}}(aq) + {{H+|nolink=y}} + e<sup>–</sup> 
+| ⇌ 
+| {{H2O-nl}} + {{chem2|HO•}} 
+| 1.14 
+| 1 
+| class=noprint | <ref name=AS5/>{{rp|790}}
+|-
+| Au
+| {{chem2|AuCl_{2}–}} + e<sup>–</sup>
+|⇌
+| Au(s) + 2&nbsp;{{chem2|Cl-}}
+| 1.15
+|1
+|class="noprint"|
+|-
+| Se
+| {{chem2|HSeO_{4}−}} + 3&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|H2SeO3}}(aq) + {{H2O-nl}}
+| 1.15
+|2
+|class="noprint"|<ref name=AS5/>{{rp|790}}
+|-
+| Ag
+| {{chem2|link=Silver oxide|Ag2O}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;Ag(s) + {{H2O-nl}}
+| 1.17
+|2
+|class="noprint"|
+|-
+| Cl
+| {{chem2|ClO_{3}–}} + 2&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|link=Chlorine dioxide|ClO2}}(g) + {{H2O-nl}}
+| 1.175
+|1
+|class="noprint"|<ref name=AS5/>{{rp|791}}
+|-
+| Xe
+| {{chem2|HXeO_{6}(3–)}} + 5&nbsp;{{H2O-nl}} + 8&nbsp;e<sup>–</sup>
+|⇌
+| Xe(g) + 11&nbsp;{{OH-|nolink=y}}
+| 1.18
+|8
+|class="noprint"|<ref name=webelements_xe/>
+|-
+| Pt
+| {{chem2|Pt(2+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| [[Platinum|Pt(s)]]
+| 1.188
+|2
+|class="noprint"|<ref name=Bar2/>
+|-
+| Cl
+| {{chem2|ClO2}}(g) + {{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|HClO2}}(aq)
+| 1.19
+|1
+|class="noprint"| <ref name=AP />
+|-
+| I
+| 2&nbsp;{{chem2|IO_{3}-}} + 12&nbsp;{{H+|nolink=y}} + 10&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|I2}}(s) + 6&nbsp;{{H2O-nl}}
+| 1.2
+|10
+|class="noprint"| <ref name=Lee />
+|-
+| Mn
+| {{chem2|link=Manganese dioxide|MnO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Mn(2+)}} + 2&nbsp;{{H2O-nl}}
+| 1.224
+|2
+|class="noprint"|<ref name=van/>
+|-
+| '''O'''
+| '''{{chem2|O2}}(g) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>'''
+|⇌
+| '''2&nbsp;{{H2O-nl}}'''
+| '''1.229'''
+|'''4'''
+|class="noprint"|<ref name=Atk/>
+|-
+| N 
+| {{chem2|N2H_{5}+}}  + 3&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| 2&nbsp;{{chem2|NH_{4}+}} 
+| 1.28 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Cl
+| {{chem2|ClO_{4}−}} + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|ClO_{3}−}} + {{H2O-nl}}
+| 1.23
+|2
+|class="noprint"|<ref name=":1"/>
+|-
+| Ru
+| {{chem2|[Ru(bipy)3](3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|link=Tris(bipyridine)ruthenium(II) chloride|[Ru(bipy)3](2+)}}
+| 1.24
+|1
+|class="noprint"|<ref name="CRC" />
+|-
+| Xe
+| {{chem2|HXeO_{4}–}} + 3&nbsp;{{H2O-nl}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| Xe(g) + 7&nbsp;{{OH-|nolink=y}}
+| 1.24
+|6
+|class="noprint"|<ref name=AS5/>{{rp|792}}<ref name=webelements_xe/>
+|-
+| N 
+| 2&nbsp;{{chem2|NO_{3}−}} + 12&nbsp;{{H+|nolink=y}} + 10&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|N2}}(g) + 6&nbsp;{{H2O-nl}} 
+| 1.25 
+| 10 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Tl
+| {{chem2|Tl(3+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Tl+}}
+| 1.25
+|2
+|class="noprint"| <ref name=AS5 />{{rp|788}}
+|-
+| N 
+| 2&nbsp;{{chem2|HNO2}}(aq) + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|N2O}}(g) + 3&nbsp;{{H2O-nl}}
+| 1.297 
+| 4 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Cr
+| {{chem2|Cr2O_{7}(2−)}} + 14&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|Cr(3+)}} + 7&nbsp;{{H2O-nl}}
+| 1.33
+|6
+|class="noprint"| <ref name=Gre/>{{rp|1005}}
+|-
+| N 
+| {{chem2|NH3OH+}} + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|NH_{4}+}} + {{H2O-nl}}
+| 1.35 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Cl
+| {{chem2|link=Chlorine|Cl2}}(g) + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|Cl-}}
+| 1.36
+|2
+|class="noprint"|<ref name=Atk/>
+|-
+| Ru
+| {{chem2|RuO_{4}−}} + 8&nbsp;{{H+|nolink=y}} + 5&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Ru(2+)}} + 4&nbsp;{{H2O-nl}}
+| 1.368
+|5
+|class="noprint"|<ref name=Greenwood1077 />
+|-
+| Ru
+| {{chem2|link=Ruthenium tetroxide|RuO4}} + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Ruthenium dioxide|RuO2}} + 2&nbsp;{{H2O-nl}}
+| 1.387
+|4
+|class="noprint"|<ref name=Greenwood1077 />
+|-
+| Co
+| {{chem2|CoO2}}(s) + 4&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|Co(3+)}} + 2&nbsp;{{H2O-nl}}
+| 1.42
+|1
+|class="noprint"|
+|-
+| N
+| 2&nbsp;{{chem2|link=Hydroxylamine|NH3OH+}} + {{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Hydrazine|N2H_{5}+}} + 2&nbsp;{{H2O-nl}}
+| 1.42
+|2
+|class="noprint"|<ref name=Gre/>
+|-
+| I
+| 2&nbsp;[[Hypoiodous acid|HIO]](aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|I2}}(s) + 2&nbsp;{{H2O-nl}}
+| 1.44
+|2
+|class="noprint"|<ref name=AS5/>{{rp|791}}
+|-
+| Br
+| {{chem2|BrO_{3}−}} + 5&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| HBrO(aq) + 2&nbsp;{{H2O-nl}}
+| 1.447
+|4
+|class="noprint"|<ref name=AS5 />{{rp|791}}
+|-
+| Pb
+| {{chem2|link=Lead dioxide|β-PbO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Pb(2+)}} + 2&nbsp;{{H2O-nl}}
+| 1.46
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| Pb
+| {{chem2|link=Lead dioxide|α-PbO2}}(s) + 4&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Pb(2+)}} + 2&nbsp;{{H2O-nl}}
+| 1.468
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| Br
+| 2&nbsp;{{chem2|BrO_{3}−}} + 12&nbsp;{{H+|nolink=y}} + 10&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Br2}}(l) + 6&nbsp;{{H2O-nl}}
+| 1.48
+|10
+|class="noprint"|
+|-
+| At
+| {{chem2|HAtO3}} + 4&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| HAtO + 2&nbsp;{{H2O-nl}}
+|1.5
+|4
+|class="noprint"|<ref name=":0"/>
+|-
+| Mn
+| {{chem2|MnO_{4}−}}  + 8&nbsp;{{H+|nolink=y}} + 5&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Mn(2+)}} + 4&nbsp;{{H2O-nl}}
+| 1.51
+|5
+|class="noprint"| <ref name=Lee />
+|-
+| O
+| {{chem2|HO_{2}•}} + {{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|link=Hydrogen peroxide|H2O2}}(aq)
+| 1.51
+|1
+|class="noprint"|
+|-
+| Au
+| {{chem2|Au(3+)}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| [[Gold|Au(s)]]
+| 1.52
+|3
+|class="noprint"|
+|-
+| Ru
+| {{chem2|RuO_{4}(2–)}} + 8&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Ru(2+)}} + 4&nbsp;{{H2O-nl}}
+| 1.563
+|4
+|class="noprint"|<ref name=Greenwood1077 />
+|-
+| N 
+| 2&nbsp;NO(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|N2O}}(g) + {{H2O-nl}}
+| 1.59 
+| 2 
+| class=noprint | <ref name=AS5 />{{rp|789}}
+|-
+| Ni
+| {{chem2|NiO2}}(s) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Ni(2+)}} + 2&nbsp;{{OH-|nolink=y}}
+| 1.59
+|2
+|class="noprint"|
+|-
+| Ce
+| {{chem2|Ce(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Ce(3+)}}
+| 1.61
+|1
+|class="noprint"|
+|-
+| Cl
+| 2&nbsp;HClO(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Cl2}}(g) + 2&nbsp;{{H2O-nl}}
+| 1.63
+|2
+|class="noprint"| <ref name=AP />
+|-
+| I
+| {{chem2|IO_{4}−}} + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|IO_{3}−}} + {{H2O-nl}}
+| 1.64
+|2
+|class="noprint"|<ref name=":1"/>
+|-
+| Ag
+| {{chem2|Ag2O3}}(s) + 6&nbsp;{{H+|nolink=y}} + 4&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|Ag+}} + 3&nbsp;{{H2O-nl}}
+| 1.67
+|4
+|class="noprint"|
+|-
+| Cl
+| {{chem2|link=Chlorous acid|HClO2}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| HClO(aq) + {{H2O-nl}}
+| 1.67
+|2
+|class="noprint"| <ref name=AP />
+|-
+| Pb
+| {{chem2|Pb(4+)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Pb(2+)}}
+| 1.69
+|2
+|class="noprint"|<ref name=Bar/>
+|-
+| Mn
+| {{chem2|link=Permanganate|MnO_{4}−}} + 4&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|link=Manganese(IV) oxide|MnO2}}(s) + 2&nbsp;{{H2O-nl}}
+| 1.7
+|3
+|class="noprint"| <ref name=Lee />
+|-
+| Br
+| {{chem2|BrO_{4}−}} + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|BrO_{3}−}} + {{H2O-nl}}
+| 1.74
+|2
+|class="noprint"|<ref name=":1">{{#invoke:cite|journal| last=Appelman | first=Evan H. | title=Nonexistent compounds. Two case histories | journal=Accounts of Chemical Research | publisher=American Chemical Society (ACS) | volume=6 | issue=4 | date=1973-04-01 | issn=0001-4842 | doi=10.1021/ar50064a001 | pages=113–117}}</ref>
+|-
+| Ag
+| AgO(s) + 2&nbsp;{{H+|nolink=y}} + e<sup>–</sup>
+|⇌
+| {{chem2|Ag+}} + {{H2O-nl}}
+| 1.77
+|1
+|class="noprint"|
+|-
+| N 
+| {{chem2|N2O}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup> 
+| ⇌ 
+| {{chem2|N2}}(g) + {{H2O-nl}}
+| 1.77 
+| 2 
+| <ref name=AS5 />{{rp|789}}
+|-
+| O
+| {{chem2|link=Hydrogen peroxide|H2O2}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{H2O-nl}}
+| 1.78
+|2
+|class="noprint"| <ref name=AP />
+|-
+| Au
+| {{chem2|Au+}} + e<sup>–</sup>
+|⇌
+| Au(s)
+| 1.83
+|1
+|class="noprint"|<ref name=Bar/>
+|-
+| Co
+| {{chem2|Co(3+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Co(2+)}}
+| 1.92
+|1
+|class="noprint"|<ref name="van??"/>
+|-
+| Ag
+| {{chem2|Ag(2+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Ag+}}
+| 1.98
+|1
+|class="noprint"|<ref name=Bar/>
+|-
+| O
+| {{chem2|link=Peroxodisulfate|S2O_{8}(2–)}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|link=Sulfate|SO_{4}(2–)}}
+| 2.01
+|2
+|class="noprint"|<ref name=van/>
+|-
+| O
+| {{chem2|link=Ozone|O3}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|O2}}(g) + {{H2O-nl}}
+| 2.075
+|2
+|class="noprint"|<ref name=Bar2/>
+|-
+| Mn
+| {{chem2|HMnO_{4}−}} + 3&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|MnO2}}(s) + 2&nbsp;{{H2O-nl}}
+| 2.09
+|2
+|class="noprint"|
+|-
+| Xe
+| {{chem2|XeO3}}(aq) + 6&nbsp;{{H+|nolink=y}} + 6&nbsp;e<sup>–</sup>
+|⇌
+| Xe(g) + 3&nbsp;{{H2O-nl}}
+| 2.12
+|6
+|class="noprint"|<ref name=AS5/>{{rp|792}}<ref name=webelements_xe/>
+|-
+| Xe
+| {{chem2|H4XeO6}}(aq) + 8&nbsp;{{H+|nolink=y}} + 8&nbsp;e<sup>–</sup>
+|⇌
+| Xe(g) + 6&nbsp;{{H2O-nl}}
+| 2.18
+|8
+|class="noprint"|<ref name=AS5/>{{rp|792}}<ref name=webelements_xe/>
+|-
+| Fe
+| {{chem2|link=Ferrate|FeO_{4}(2−)}} + 8&nbsp;{{H+|nolink=y}} + 3&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|Fe(3+)}} + 4&nbsp;{{H2O-nl}}
+| 2.2
+|3
+|class="noprint"|<ref name=wou>{{#invoke:cite|web|first=Arlene |last=Courtney  |title=Oxidation Reduction Chemistry of the Elements |work=Ch 412 Advanced Inorganic Chemistry: Reading Materials |publisher=Western Oregon University |url=https://people.wou.edu/~courtna/ch412/redox.htm}}</ref>
+|-
+| Xe
+| {{chem2|XeF2}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| Xe(g) + 2&nbsp;HF(aq)
+| 2.32
+|2
+|class="noprint"|<ref name=webelements_xe/><ref name=AP />
+|-
+| O 
+| {{chem2|HO•}} + {{H+|nolink=y}} + e<sup>–</sup> 
+| ⇌ 
+| {{H2O-nl}}
+| 2.38 
+| 1 
+| class=noprint | <ref name=AS5 />{{rp|790}}
+|-
+| Xe
+| {{chem2|H4XeO6}}(aq) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| {{chem2|XeO3}}(aq) + 3&nbsp;{{H2O-nl}}
+| 2.42
+|2
+|class="noprint"|<ref name=webelements_xe/><ref name=AS5/>{{rp|792}}
+|-
+| F
+| {{chem2|link=Fluorine|F2}}(g) + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;{{chem2|F-}}
+| 2.87
+|2
+|class="noprint"|<ref name=AS5 />{{rp|153}}<ref name=Atk/><ref name=Bar/>
+|-
+|Cm
+| {{chem2|Cm(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Cm(3+)}}
+|3.0
+|1
+|class="noprint"|Estimated<ref name=VanSrc/>
+|-
+| F
+| {{chem2|link=Fluorine|F2}}(g) + 2&nbsp;{{H+|nolink=y}} + 2&nbsp;e<sup>–</sup>
+|⇌
+| 2&nbsp;HF(aq)
+| 3.077
+|2
+|class="noprint"|<ref name="VanSrc" />
+|-
+|Tb
+| {{chem2|Tb(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Tb(3+)}}
+|3.1
+|1
+|class="noprint"|Estimated<ref name="VanSrc" />
+|-
+|Pr
+| {{chem2|Pr(4+)}} + e<sup>–</sup>
+|⇌
+| {{chem2|Pr(3+)}}
+|3.2
+|1
+|class="noprint"|Estimated<ref name="VanSrc" />
+|-
+| Kr
+| {{chem2|link=Krypton difluoride|KrF2}}(aq) + 2&nbsp;e<sup>–</sup>
+|⇌
+| Kr(g) + 2&nbsp;{{chem2|F-}}
+| 3.27
+|2
+|class="noprint"| Estimated<ref>{{#invoke:cite|journal|first1=P.J. |last1=Leszczyński |first2=W. |last2=Grochala |title=Strong Cationic Oxidizers: Thermal Decomposition, Electronic Structure and Magnetism of Their Compounds |journal=Acta Chim. Slov. |volume=60 |issue=3 |pages=455–470 |year=2013 |pmid=24169699 |url=http://acta-arhiv.chem-soc.si/60/60-3-455.pdf |archive-url=https://ghostarchive.org/archive/20221009/http://acta-arhiv.chem-soc.si/60/60-3-455.pdf |archive-date=2022-10-09 |url-status=live}}
+</ref>
+|}
+
+== See also ==
+* [[Galvanic series]] lists [[electrode potential]]s in saltwater
+* [[Table of standard reduction potentials for half-reactions important in biochemistry|Standard apparent reduction potentials in biochemistry at pH 7]]
+* [[Reactivity series#Comparison with standard electrode potentials]]
+
+== Notes ==
+<templatestyles src="Reflist/styles.css" /><div class="reflist"><references group="note" responsive="1">
+<ref name=rwP group=note>Not specified in the indicated reference, but assumed due to the difference between the value −0.454 and that computed by (2×(−0.499) + (−0.508))/3 = −0.502, exactly matching the difference between the values for white (−0.063) and red (−0.111) phosphorus in equilibrium with {{chem2|PH3}}.</ref>
+</references></div>
+
+== References ==
+<references>
+<ref name=Bar>{{#invoke:cite|book|first1=Allen J. |last1=Bard |first2=Roger |last2=Parsons |first3=Joseph |last3=Jordan |title=Standard Potentials in Aqueous Solution |url=https://books.google.com/books?id=fuJV1H18KtEC |date=1985 |publisher=CRC Press |isbn=978-0-8247-7291-8 }}</ref>
+<ref name=van>{{#invoke:cite|book|last= Vanýsek |first=Petr |year=2012 |editor-last=Haynes |editor-first=William M. |chapter= Electrochemical Series |pages=5–80 |title= Handbook of Chemistry and Physics |edition=93rd |publisher=CRC Press |chapter-url=https://books.google.com/books?id=-BzP7Rkl7WkC&pg=SA5-PA80 |isbn=9781439880494}}</ref>
+<ref name=van92>{{#invoke:cite|book|last=Vanýsek |first=Petr |chapter=Electrochemical Series |editor-first=William M. |editor-last=Haynes |title=CRC Handbook of Chemistry and Physics |chapter-url=https://books.google.com/books?id=pYPRBQAAQBAJ&pg=SA5-PA80 |date=2011 |publisher=CRC Press |isbn=978-1-4398-5512-6 |pages=5–80–9 |edition=92nd}}</ref>
+<ref name="van??">{{#invoke:cite|web|author=Petr Vanysek|title=Electrochemical series|website=depa.fquim.unam.mx |url=http://depa.fquim.unam.mx/amyd/archivero/TablasdepotencialesREDOX_26700.pdf |archive-url=https://web.archive.org/web/20210916165426/http://depa.fquim.unam.mx/amyd/archivero/TablasdepotencialesREDOX_26700.pdf|archive-date=2021-09-16 |url-status=dead}}</ref>
+<ref name=VanSrc>{{#invoke:cite|journal|last=Bratsch |first=Stephen&nbsp;G. |date=July 29, 1988 |orig-date=1 March 1988 |title=Standard electrode potentials and temperature coefficients in water at 298.15&nbsp;K |url=https://srd.nist.gov/jpcrdreprint/1.555839.pdf |journal=Journal of Physical and Chemical Reference Data |publisher=American Institute of Physics |publication-date=1989 |volume=18 |issue=1 |pages=1–21 |doi=10.1063/1.555839 |bibcode=1989JPCRD..18....1B |via=NIST}}</ref>
+<ref name=Gre>{{Greenwood&Earnshaw}}</ref>
+<ref name=Bar2>{{#invoke:cite|book|last1=Bard |first1=A.J. |last2=Faulkner |first2=L.R. |title=Electrochemical Methods. Fundamentals and Applications |publisher=Wiley |year=2001 |isbn=9781118312803 |edition=2nd}}</ref>
+<ref name=Pou>{{#invoke:cite|book|first=Marcel |last=Pourbaix |year=1966 |title=Atlas of Electrochemical Equilibria in Aqueous Solutions |publisher=NACE International |location=Houston, Texas; Cebelcor, Brussels |oclc=475102548}}</ref>
+<ref name=Atk>{{#invoke:cite|book|first=Peter W. |last=Atkins |title=Physical Chemistry |publisher=W.H. Freeman |year=1997 |isbn=9780716734659 |edition=6th}}</ref>
+<ref name=AS5>{{#invoke:cite|book|last1=Atkins |first1=Peter |last2=Overton |first2=Tina |last3=Rourke |first3=Jonathan |last4=Weller |first4=Mark |last5=Armstrong |first5=Fraser |last6=Hagerman |first6=Michael |title=Inorganic Chemistry |edition=5th |year=2010 |publisher=W. H. Freeman |location=New York |isbn= 978-1-42-921820-7}}</ref>
+<ref name=si>{{#invoke:cite|book|first1=Gordon |last1=Aylward |first2=Tristan |last2=Findlay |title=SI Chemical Data |publisher=Wiley |year=2008 |isbn=978-0-470-81638-7 |edition=6th}}</ref>
+<ref name="Pang2007">{{#invoke:cite|journal|last1=Pang |first1=Suh Cem |last2=Chin |first2=Suk Fun |last3= Anderson |first3= Marc A. |date= July 2007 |title= Redox equilibria of iron oxides in aqueous-based magnetite dispersions: Effect of pH and redox potential |url= https://www.academia.edu/9254087 |journal= J. Colloid Interface Sci. |volume= 311 |issue=1 |pages= 94–101 |doi= 10.1016/j.jcis.2007.02.058|pmid= 17395194 |access-date= 2017-03-26 |bibcode=2007JCIS..311...94P }}</ref>
+<ref name=Lee>{{#invoke:cite|book|title=A New Concise Inorganic Chemistry|edition=3rd|first=J.&nbsp;L.|last=Lee|publisher=English Language Book Society & Van Nostrand Reinhold (UK)|location=London / Wokingham, Berkshire|orig-date=1977|year=1983|isbn=0-442-30179-0|page=107|ol=4079768W|via=the [[Internet Archive]]}}</ref>
+<ref name=AP>{{#invoke:cite|book|title=Arrow Pushing in Inorganic Chemistry: A logical approach to the chemistry of the main-group elements|first1=Abhik|last1=Ghosh|first2=Steffen|last2=Berg|publisher=Wiley|year=2014|location=Hoboken|isbn=978-1-118-17398-5|page=12}}</ref>
+</references>
+
+==External links==
+* {{#invoke:cite|web|title=P1: Standard Reduction Potentials by Element |author=Chemistry LibreTexts |work=Chemistry LibreTexts |date=2021-04-26 |access-date=2021-11-30 |url= https://chem.libretexts.org/Ancillary_Materials/Reference/Reference_Tables/Electrochemistry_Tables/P1%3A_Standard_Reduction_Potentials_by_Element}}
+* {{#invoke:cite|web|title=Standard Reduction Potentials |author=California State University, Northridge (CSUN) |work=csun.edu |date= |access-date=2021-11-30 |url= https://www.csun.edu/~hcchm003/321/Ered.pdf |archive-url=https://web.archive.org/web/20171215093555/http://www.csun.edu/~hcchm003/321/Ered.pdf |archive-date=2017-12-15 |url-status=live |language=English}}
+* {{#invoke:cite|web|title=Reduction potentials of one-electron couples involving free radicals in aqueous solution |last1=Wardman |first1=Peter |work=srd.nist.gov |year=1989 |volume=18 |issue=4 |page=1637 |doi=10.1063/1.555843 |bibcode=1989JPCRD..18.1637W |access-date=2021-11-30 |url= https://srd.nist.gov/JPCRD/jpcrd372.pdf |archive-url=https://ghostarchive.org/archive/20221009/https://srd.nist.gov/JPCRD/jpcrd372.pdf |archive-date=2022-10-09 |url-status=live |language=English}}
+* http://www.jesuitnola.org/upload/clark/Refs/red_pot.htm {{Webarchive|url=https://web.archive.org/web/20080720062116/http://www.jesuitnola.org/upload/clark/Refs/red_pot.htm |date=2008-07-20 }}
+* https://web.archive.org/web/20150924015049/http://www.fptl.ru/biblioteka/spravo4niki/handbook-of-Chemistry-and-Physics.pdf
+* http://hyperphysics.phy-astr.gsu.edu/Hbase/tables/electpot.html#c1
+
+{{DEFAULTSORT:Standard Electrode Potentials}}
+[[Category:Electrochemistry]]
+[[Category:Electrochemical potentials]]
+[[Category:Chemistry-related lists]]

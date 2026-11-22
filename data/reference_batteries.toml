@@ -1,0 +1,70 @@
+# Reference: lithium-ion batteries in current cars, for comparison in every view.
+# These are liquid-electrolyte lithium-ion cells (not solid-state).
+# Values are published measurements or market surveys; ranges where sources
+# disagree. "quality" says how firm each figure is.
+
+[[battery]]
+name = "Tesla 4680 (NMC 811), cell"
+level = "cell"
+wh_kg = [232.5, 244.0]
+wh_l = [622.4, 643.0]
+cell_usd_kwh = [78.0, 104.7]
+quality = "teardown measurements; cost is an analyst estimate"
+sources = [
+  "J. Electrochem. Soc. teardown of a 1st-gen 4680 cell: 232.5 Wh/kg, 622.4 Wh/L, doi:10.1149/1945-7111/ad14d0",
+  "About:Energy measurement reported by Fastmarkets: ~243 Wh/kg, https://www.fastmarkets.com/insights/fastmarkets-cell-cost-reports-tesla-4680-cylindrical-october-2023/",
+  "Notebookcheck: Model Y 4680 cell 244 Wh/kg, https://www.notebookcheck.net/Tesla-4680-vs-2170-battery-cell-test-reveals-lower-energy-density-in-the-Texas-made-Model-Y.669162.0.html",
+  "Fastmarkets cell cost Oct 2023: 104.7 USD/kWh (US), 78 USD/kWh (China)",
+]
+
+[[battery]]
+name = "Tesla/Panasonic 2170 (NCA), cell"
+level = "cell"
+wh_kg = [269.0, 269.0]
+quality = "single test report"
+sources = ["Notebookcheck comparison: 269 Wh/kg, https://www.notebookcheck.net/Tesla-4680-vs-2170-battery-cell-test-reveals-lower-energy-density-in-the-Texas-made-Model-Y.669162.0.html"]
+
+[[battery]]
+name = "BYD Blade (LFP, 1st gen), cell"
+level = "cell"
+wh_kg = [150.0, 166.0]
+wh_l = [355.0, 448.0]
+cycles = [3000, 3000]
+quality = "secondary sources; BYD datasheet not found"
+sources = [
+  "https://www.zmescience.com/tech/tesla-byd-battery-teardown (160 Wh/kg, 355 Wh/L)",
+  "https://www.ufinebattery.com/blog/byd-blade-battery-comprehensive-guide/ (165 Wh/kg, 448 Wh/L, 3000+ cycles)",
+  "https://evscope.github.io/posts/inside-byd-blade-battery (3000+ cycles)",
+]
+
+[[battery]]
+name = "BYD Blade (LFP), pack"
+level = "pack"
+wh_kg = [140.0, 140.0]
+quality = "secondary source"
+sources = ["https://evscope.github.io/posts/inside-byd-blade-battery (~140 Wh/kg pack)"]
+
+[[battery]]
+name = "EV lithium-ion pack (cell-to-module-to-pack example)"
+level = "pack"
+wh_kg = [126.0, 126.0]
+wh_l = [208.0, 208.0]
+quality = "peer-reviewed example (176 Wh/kg cell -> 126 Wh/kg pack)"
+sources = ["World Electric Vehicle Journal 15(6) (2024) 268, https://mdpi.com/2032-6653/15/6/268"]
+
+[[battery]]
+name = "Car pack fast charge (Tesla Model 3, 10-80 %)"
+level = "pack"
+charge_minutes_10_80 = [25.0, 30.0]
+quality = "secondary source, varies by variant and charger"
+sources = ["https://electrly.com/ev-charging-guide/tesla/tesla-model-3"]
+
+[prices]
+# BloombergNEF 2025 Lithium-Ion Battery Price Survey (press release, Dec 2025)
+source = "https://about.bnef.com/insights/clean-transport/lithium-ion-battery-pack-prices/"
+pack_avg_usd_kwh = 108.0
+pack_lfp_usd_kwh = 81.0
+pack_nmc_usd_kwh = 128.0
+pack_bev_usd_kwh = 99.0
+pack_stationary_usd_kwh = 70.0
+cell_avg_usd_kwh = 74.0

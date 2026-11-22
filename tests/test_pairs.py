@@ -1,0 +1,67 @@
+"""Two-molecule cells."""
+
+import math
+import tomllib
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from h2screener import options, pairs
+from h2screener import molecules as M
+from h2screener.constants import F
+from h2screener.reactions import reaction_balanced
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def mol(smiles, e0, sol=1.0):
+    r = M.MolResult(M.canonical(smiles), M.reduced_forms(smiles)[0], 0.0, e0)
+    r.mw, r.solubility_mol_l, r.sa = M.descriptors(smiles)["mw"], sol, 2.0
+    return r
+
+
+def test_pair_voltage_and_energy_per_litre():
+    v, whl, _ = pairs.pair_value(0.1, 1.0, 200, 0.9, 1.0, 100)
+    assert v == pytest.approx(0.8)
+    assert whl == pytest.approx(0.8 * 2 * F / 3600 / 2)        # two 1 M tanks per mole of electrons-pair
+
+
+def test_water_window_and_headroom_reject():
+    assert pairs.pair_value(-0.5, 1, 100, 0.8, 1, 100)[1] == 0      # negative would make H2
+    assert pairs.pair_value(0.1, 1, 100, 1.6, 1, 100)[1] == 0       # positive would make O2
+
+
+def test_pair_cell_is_balanced_and_gas_free():
+    n = mol("O=C1c2ccccc2C(=O)c2ccccc21", 0.1)
+    p = mol("O=C1C=CC(=O)C=C1", 0.7)
+    c = pairs.as_cell(pairs.make_pair(n, p))
+    assert reaction_balanced(c.reactants, c.products)
+    assert not c.gas_terms() and c.h2_consumed() == 0
+
+
+def test_pair_sizing_has_no_burst_energy():
+    t = tomllib.load(open(ROOT / "targets.toml", "rb"))
+    n = mol("O=C1c2ccccc2C(=O)c2ccccc21", 0.1, 2.0)
+    p = mol("O=C1C=CC(=O)C=C1", 0.75, 2.0)
+    c = options.pair_configuration(pairs.make_pair(n, p), t, np.random.default_rng(0))
+    assert c is not None and c.store.burst_tnt_kg == 0 and c.wh_kg > 0
+
+
+def test_price_ceiling_follows_mass_per_kwh():
+    kg = pairs.kg_per_kwh(200, 1.0)
+    assert kg == pytest.approx(1000 * 3600 / (2 * F) * 0.2 * 1.2)
+
+
+def test_one_molecule_with_two_steps_makes_a_symmetric_cell():
+    r = M.MolResult("X", "XH2", 0.0, 1.25, steps=[1.25, 0.22], forms=["XH2", "XH4"])
+    r.reduced, r.mw, r.solubility_mol_l, r.sa = "XH2", 200.0, 1.0, 2.0
+    pr = pairs.make_pair(r, r, kn=1, kp=1)
+    assert pr.voltage == pytest.approx(1.03)
+    assert pr.score > 0 and "same molecule" in pr.notes[0]
+
+
+def test_two_electron_steps_double_capacity():
+    one = pairs.pair_value([0.1], 1, 200, [0.8], 1, 200)[1]
+    two = pairs.pair_value([0.1], 1, 200, [0.8, 0.8], 1, 200)[1]
+    assert two > one
