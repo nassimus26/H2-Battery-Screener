@@ -38,18 +38,25 @@ Sidebar: what to build (stationary or car pack preset, power, duration,
 pressure limits, efficiency target, lifetime, electricity price, ranking
 weights). Tabs:
 
-- **Best candidates**: every sized couple with system Wh/kg and Wh/L, build
-  cost, levelised cost of storage, efficiency band, fastest charge, burst
-  energy, leak rate, H2 refill interval, chemical drift, and better/worse
-  against current car lithium-ion packs.
 - **Trade-offs**: energy per kg vs build cost (Pareto front, Li-ion lines),
   safety vs cost, energy per kg vs pressure.
-- **Candidate detail**: mass, volume, cost, LCOS, burst energy, leak, H2 loss
-  and efficiency against pressure; power vs duration; efficiency vs current;
-  mass breakdown; maintenance and closure; every input with its provenance.
-- **AI molecule discovery**: genetic generator (SELFIES) + surrogate model +
-  GFN2-xTB voltages; marks molecules absent from PubChem; sizes chosen
-  molecules as batteries.
+- **⭐ Candidates**: first, the best candidates of every battery type in one
+  table (table couples, molecule + H2, two molecules, sealed gases), each
+  sized as a whole battery, with today's and purpose-built prices and what it
+  beats lithium-ion on; the table couples' full detail (pressure, burst energy,
+  leak rate, H2 refill interval, chemical drift) is in an expander. Then your
+  interesting candidates of every kind
+  (couples, molecules, pairs, sealed gas cells), recalculated with the
+  settings, with total and per-kWh build price and a one-setting sweep; below,
+  the details of any candidate: mass, volume, cost, LCOS, burst energy, leak,
+  H2 loss and efficiency against pressure; power vs duration; efficiency vs
+  current; mass breakdown; maintenance and closure; every input with its
+  provenance; for gas cells, 350 vs 700 bar tanks and where the money goes.
+- **AI discovery: 3 battery types** (pick one at the top of the tab):
+  molecule + hydrogen gas, two molecules (no gas), and two gases (sealed).
+  Each has the same AI loop: genetic generator (SELFIES) + surrogate model +
+  GFN2-xTB; the gas search starts from every molecule up to 4 heavy atoms
+  and proposes larger ones.
 - **Li-ion reference and validation**: Tesla 4680/2170, BYD Blade, pack
   prices (BloombergNEF 2025) with sources, and the model checks.
 

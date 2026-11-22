@@ -1,0 +1,58 @@
+2026-11-23 05:45:09.516 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-11-23 05:45:09.517 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-11-23 05:45:09.517 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-11-23 05:45:37.083 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-11-23 05:45:37.094 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-11-23 05:45:39.191 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-11-23 05:45:39.191 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+Timeout (0:04:00)!
+Thread 0x000000016d6eb000 (most recent call first):
+  File "/Users/mk/StudioProjects/h2-screener/h2screener/gases.py", line 723 in key
+  File "/Users/mk/StudioProjects/h2-screener/h2screener/gases.py", line 800 in screen
+  File "/Users/mk/StudioProjects/h2-screener/app.py", line 1631 in gas_screen
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/caching/cache_utils.py", line 887 in _handle_cache_miss
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/caching/cache_utils.py", line 823 in _get_or_create_cached_value
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/caching/cache_utils.py", line 762 in __call__
+  File "/Users/mk/StudioProjects/h2-screener/app.py", line 1924 in gas_ai_best_cells
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/caching/cache_utils.py", line 887 in _handle_cache_miss
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/caching/cache_utils.py", line 823 in _get_or_create_cached_value
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/caching/cache_utils.py", line 762 in __call__
+  File "/Users/mk/StudioProjects/h2-screener/app.py", line 1816 in gas_search_panel
+  File "/Users/mk/StudioProjects/h2-screener/app.py", line 2154 in gas_tab
+  File "/Users/mk/StudioProjects/h2-screener/app.py", line 2911 in <module>
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 936 in code_to_exec
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 136 in exec_func_with_error_handling
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 961 in _run_script
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 443 in _run_script_thread
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/local_script_runner.py", line 157 in _run_script_thread
+  File "/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/threading.py", line 1012 in run
+  File "/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/threading.py", line 1075 in _bootstrap_inner
+  File "/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/threading.py", line 1032 in _bootstrap
+
+Thread 0x00000001f53be240 (most recent call first):
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/local_script_runner.py", line 253 in require_widgets_deltas
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/local_script_runner.py", line 198 in run
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/app_test.py", line 698 in _run
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/element_tree.py", line 4251 in run
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/app_test.py", line 801 in run
+  File "/Users/mk/StudioProjects/h2-screener/scripts/dev/apptest.py", line 18 in <module>
+🧪 AI discovery: 3 ba molecule    28 s exceptions: []
+🧪 AI discovery: 3 ba pair         2 s exceptions: []
+Traceback (most recent call last):
+  File "/Users/mk/StudioProjects/h2-screener/scripts/dev/apptest.py", line 18, in <module>
+    if kind:
+             
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/app_test.py", line 801, in run
+    return self._tree.run(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/element_tree.py", line 4251, in run
+    result = self._runner._run(widget_states, timeout=timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/app_test.py", line 698, in _run
+    self._tree = script_runner.run(
+                 ^^^^^^^^^^^^^^^^^^
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/local_script_runner.py", line 198, in run
+    require_widgets_deltas(self, timeout)
+  File "/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/streamlit/testing/v1/local_script_runner.py", line 266, in require_widgets_deltas
+    raise RuntimeError(err_string)
+RuntimeError: AppTest script run timed out after 900(s)

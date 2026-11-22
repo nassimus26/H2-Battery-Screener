@@ -1,0 +1,32 @@
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+[1/12] dft   aq O=C1C=CC(=O)C=C1               ok     572 s
+[2/12] dft   aq O=C1C=CC=CC1=O                 ok     585 s
+[3/12] dft   aq Oc1ccc(O)cc1                   ok     615 s
+[4/12] dft   aq Oc1ccccc1O                     ok     676 s
+[5/12] dft   aq Cc1cc(O)ccc1O                  ok     942 s
+[6/12] dft   aq CC1=CC(=O)C=CC1=O              ok    1014 s
+[7/12] dft   aq O=C1C=CC(=O)c2ccccc21          ok    2056 s
+[8/12] dft   aq Oc1ccc(O)c2ccccc12             ok    2084 s

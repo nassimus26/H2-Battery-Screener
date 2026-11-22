@@ -9,10 +9,11 @@ survive. Each form is relaxed with GFN2-xTB in implicit water (ALPB), and
   E = -(E[MH2] - E[M] - E[H2]) / 2F + offset
 
 The offset absorbs zero-point, thermal and solvation errors common to H2
-addition. It is fixed by one measured couple from the potential table,
-p-benzoquinone/hydroquinone 0.6992 V vs SHE. Single conformers and the
+addition. It is fitted on the training half of the known quinone couples
+(KNOWN_E0); the other half only tests it. Single conformers and the
 semi-empirical method leave an error of a few tenths of a volt; results carry
-that band.
+that band. The top candidates are recomputed from first principles with DFT
+(abinitio.hydrogenation_voltage), with no measured value at all.
 
 Cheap descriptors used alongside:
   solubility   ESOL (Delaney, J. Chem. Inf. Comput. Sci. 44 (2004) 1000)
@@ -37,6 +38,7 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 
+import numpy as np
 from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem, Crippen, Descriptors, Lipinski, RDConfig, rdDetermineBonds, rdMolDescriptors
 
@@ -304,9 +306,35 @@ def energy(smiles: str) -> float:
     return cache[key]
 
 
+# Known quinone couples (Q + 2H+ + 2e- -> QH2, V vs SHE). Split in two halves by SMILES order: the one
+# constant of the fast xTB voltages (its offset) is fitted on the training half; the test half only
+# measures the error. The accurate DFT voltages (abinitio.hydrogenation_voltage) use none of them.
+KNOWN_E0 = {
+    "O=C1C=CC(=O)C=C1": ("p-benzoquinone", 0.6992),
+    "O=C1C=CC=CC1=O": ("o-benzoquinone", 0.792),
+    "CC1=CC(=O)C=CC1=O": ("methyl-p-benzoquinone", 0.645),
+    "O=C1C=CC(=O)c2ccccc21": ("1,4-naphthoquinone", 0.470),
+    "O=C1c2ccccc2C(=O)c2cc(S(=O)(=O)O)ccc21": ("AQS", 0.187),
+    "O=C1c2ccc(S(=O)(=O)O)cc2C(=O)c2cc(S(=O)(=O)O)ccc21": ("AQDS", 0.213),
+}
+
+
+def known_split() -> tuple[list[str], list[str]]:
+    ks = sorted(KNOWN_E0)
+    return ks[0::2], ks[1::2]
+
+
 @lru_cache(maxsize=1)
+def offset_fit() -> dict:
+    """{'offset': V, 'test_errors': {smiles: V}, 'test_rmse': V} - offset fitted on the training half."""
+    train, test = known_split()
+    off = float(np.mean([KNOWN_E0[s][1] - raw_voltage(s)[0] for s in train]))
+    errs = {s: raw_voltage(s)[0] + off - KNOWN_E0[s][1] for s in test}
+    return {"offset": off, "test_errors": errs, "test_rmse": float(np.sqrt(np.mean(np.square(list(errs.values())))))}
+
+
 def offset() -> float:
-    return REFERENCE_E0 - raw_voltage(REFERENCE_SMILES)[0]
+    return offset_fit()["offset"]
 
 
 TAUTOMER_EV = 0.10   # eV: a tautomer this much lower takes over the population
@@ -531,6 +559,6 @@ def as_cell(r: MolResult) -> CellReaction:
     red = Species(f_red, 0, "aq", red_smiles)
     c = CellReaction(None, None, {ox: 1, Species("H2", 0, "g", "H2(g)"): k}, {red: 1}, 2 * k, e_mean, "acid",
                      origin="xtb-molecule",
-                     source=f"GFN2-xTB/ALPB(water), offset from p-benzoquinone 0.6992 V; +/-{VOLTAGE_BAND} V")
+                     source=f"GFN2-xTB/ALPB(water), one offset fitted on half of the known quinones; +/-{VOLTAGE_BAND} V")
     c.solubility_mol_l = r.solubility_mol_l
     return c

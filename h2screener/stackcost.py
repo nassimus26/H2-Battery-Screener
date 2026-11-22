@@ -36,6 +36,24 @@ Each value carries a range (low-high) from the spread of the study numbers.
 Power electronics: inverter ~97.5 USD/kW (NREL, 2023 commercial PV-plus-
 storage cost benchmark, central inverter). A car would need a DC/DC converter
 between the stack and the motor inverter, of similar order.
+
+Purpose-built ("target"): a battery designed for its one chemistry and made at
+volume, priced at the published cost targets instead of today's hardware:
+  gas cell stack  US DOE ultimate heavy-duty fuel-cell system target 60 USD/kW
+                  (vs 155 USD/kW in the 2024 status above, Program Record 26002;
+                  NREL/TP-5400-91146, 2026): the same share of the 2024 stack,
+                  240 x 60/155 = ~93 USD/m2 without platinum; the light-duty
+                  ultimate target (30 vs ~57 USD/kW status) gives a similar
+                  ratio (0.53) -> range 70-130 USD/m2
+  power electronics  US DOE 2025 traction power-electronics target 2.7 USD/kW
+                  (100 kW/L), a DC/DC converter matched to the cell instead of a
+                  grid inverter; range 1.5-6 USD/kW. Note: lithium-ion pack prices
+                  include no inverter either
+  carbon-fibre tanks  US DOE ultimate onboard storage target 8 USD/kWh vs
+                  ~16-17 USD/kWh status for 700 bar Type IV (Records 13010, 19008):
+                  composite price x 0.5 (heavy-duty: 266 vs 378 USD/kg H2, x 0.7)
+  liquid cell stack, tanks and pumps: no published target found; kept at the
+                  mass-production values above
 """
 
 from __future__ import annotations
@@ -55,13 +73,22 @@ class Estimate:
         return f"{self.usd:,.0f} {unit} (range {self.lo:,.0f}-{self.hi:,.0f})"
 
 
-SCALES = {"mass": "mass production (like Li-ion packs)", "small": "small series or first prototypes"}
+SCALES = {"mass": "today's parts, mass production (like Li-ion packs)",
+          "target": "purpose-built, at published cost targets (US DOE)",
+          "small": "small series or first prototypes"}
+
+TANK_COST_FACTOR = {"mass": 1.0, "small": 1.0, "target": 0.5}   # carbon-fibre tanks: DOE 8 vs ~16 USD/kWh
 
 _STACK = {
     ("gas", "mass"): Estimate(240.0, 170.0, 340.0,
                               "US DOE 2024 fuel-cell truck stack at 50,000 systems a year, without its platinum"),
     ("gas", "small"): Estimate(640.0, 450.0, 900.0,
                                "US DOE 2024 fuel-cell truck stack below 1,000 systems a year, without its platinum"),
+    ("gas", "target"): Estimate(93.0, 70.0, 130.0,
+                                "US DOE ultimate fuel-cell cost target (60 USD/kW heavy-duty vs 155 today) applied "
+                                "to the 2024 stack, without its platinum"),
+    ("liquid", "target"): Estimate(150.0, 90.0, 250.0,
+                                   "no published target for flow-cell stacks: kept at the mass-production price"),
     ("liquid", "mass"): Estimate(150.0, 90.0, 250.0,
                                  "membrane, two carbon electrodes and a carbon-plastic plate at volume prices "
                                  "(US DOE 2024, Noack et al. 2016), plus 50% for frames, seals and assembly"),
@@ -70,6 +97,13 @@ _STACK = {
 }
 
 POWER_ELECTRONICS = Estimate(97.5, 70.0, 150.0, "inverter price, NREL 2023 storage cost benchmark")
+POWER_ELECTRONICS_TARGET = Estimate(2.7, 1.5, 6.0, "US DOE 2025 traction power-electronics cost target "
+                                                   "(a DC/DC converter matched to the cell)")
+
+
+def power_electronics(scale: str = "mass") -> Estimate:
+    """USD per kW of power electronics: today's inverter, or the purpose-built target."""
+    return POWER_ELECTRONICS_TARGET if scale == "target" else POWER_ELECTRONICS
 
 
 def stack(kind: str, scale: str = "mass") -> Estimate:

@@ -117,6 +117,8 @@ def species_smiles(label: str) -> str | None:
     """The SMILES behind a molecule species: its label is the SMILES,
     optionally followed by a role tag such as ' (negative)'."""
     s = label.split(" (")[0].strip()
+    if s.endswith(("(g)", "(l)", "(aq)", "(s)")):          # a formula with its phase (gas cells): not a SMILES
+        return None
     return s if is_organic(s) else None
 
 

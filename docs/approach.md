@@ -145,7 +145,7 @@ side, hydrogen electrode on the negative) or paired with a second molecule.
 
 `pairs.py`. Hydrogen moves between two molecules as protons through the
 membrane and electrons through the wire; it is never a gas. The animation in
-the app's "Two-molecule batteries" tab shows the flow, discharging or charging.
+the app's "AI discovery" tab (type "Two molecules (no gas)") shows the flow, discharging or charging.
 
 ```
 negative:  N-H₂ → N + 2H⁺ + 2e⁻        positive:  P + 2H⁺ + 2e⁻ → P-H₂
@@ -241,8 +241,8 @@ sets how many of the top-ranked couples get the full sizing of section 5.
 
 ## 11. Exploring a candidate
 
-- **Interesting candidates** (first tab): add any couple, molecule or pair from
-  its detail window. All of them are recalculated every time a sidebar setting
+- **⭐ Candidates** (first tab): add any couple, molecule, pair or sealed gas
+  cell from its detail window or from the details picker in the same tab. All of them are recalculated every time a sidebar setting
   changes and shown side by side (build cost, lifetime cost, Wh/kg, Wh/L,
   efficiency, best pressure).
 - **How one setting changes them:** a sweep of one setting (pressure, power,

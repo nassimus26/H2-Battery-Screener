@@ -1,0 +1,1316 @@
+"""Visual simulator: run the hydrogen battery search, see the trade-offs, and
+compare every candidate with the lithium-ion packs in current cars.
+
+    .venv/bin/streamlit run app.py
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import math
+import tomllib
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+from plotly.subplots import make_subplots
+
+from h2screener import ai_search, gases, design, discover, explain, options, pairs, rank, reference, runs, stackcost, synthesis, animation
+from h2screener import molecules as M
+
+ROOT = Path(__file__).resolve().parent
+st.set_page_config(page_title="Hydrogen battery simulator", layout="wide")
+
+BASE = tomllib.load(open(ROOT / "targets.toml", "rb"))
+REF = reference.load()
+LI = reference.pack_targets(REF)
+
+PRESETS = {
+    "Stationary storage (100 kW for 6 h)": dict(power_kw=100.0, hours=6.0, charge_hours_target=6.0),
+    "Car pack (75 kWh, 250 kW peak)": dict(power_kw=250.0, hours=0.3, charge_hours_target=0.5),
+}
+
+# ------------------------------------------------------------------ controls
+
+SS = st.session_state
+SS["_full_run"] = True                      # set to False at the end of every full page run
+SETTING_KEYS = ["cfg_tab", "mol_live", "pair_live", "cfg_preset", "cfg_power", "cfg_hours", "cfg_pmax", "cfg_pmin", "cfg_rte", "cfg_life", "cfg_elec",
+                "cfg_topn", "cfg_scale", "watchlist", "mol_gens", "mol_batch", "mol_heavy", "mol_kappa",
+                "pair_gens", "pair_batch", "pair_heavy", "pair_kappa"] + [f"w_{k}" for k in BASE["ranking"]
+                                                                         if isinstance(BASE["ranking"][k], (int, float))]
+if "_settings_loaded" not in SS:            # restore the last settings after a page reload
+    for k, v in runs.load_settings().items():
+        if k in SETTING_KEYS:
+            SS[k] = v
+    SS["_settings_loaded"] = True
+
+
+def default(key: str, value):
+    """Give a widget its default once; afterwards its own (saved) value is used."""
+    if key not in SS:
+        SS[key] = value
+
+
+def apply_preset():
+    pre_ = PRESETS[SS["cfg_preset"]]
+    SS["cfg_power"], SS["cfg_hours"] = pre_["power_kw"], pre_["hours"]
+
+
+def restore_settings(rec: dict):
+    for k, v in rec.get("settings", {}).items():
+        if k in SETTING_KEYS:
+            SS[k] = v
+
+
+with st.sidebar:
+    st.header("What to build")
+    default("cfg_preset", list(PRESETS)[0])
+    preset = st.selectbox("Use", list(PRESETS), key="cfg_preset", on_change=apply_preset)
+    pre = PRESETS[preset]
+    default("cfg_power", pre["power_kw"])
+    default("cfg_hours", pre["hours"])
+    power = st.number_input("Power, kW", 1.0, 100000.0, key="cfg_power")
+    hours = st.number_input("Delivers full power for, hours", 0.05, 200.0, key="cfg_hours")
+    st.caption(f"Stored energy: {power * hours:,.0f} kWh")
+    default("cfg_pmax", int(BASE["use"]["p_max_bar"]))
+    p_max = st.slider("Highest hydrogen pressure, bar", 5, 200, key="cfg_pmax")
+    default("cfg_pmin", int(BASE["use"]["p_min_bar"]))
+    p_min = st.slider("Pressure left when empty, bar (gas tanks only)", 1, 20, key="cfg_pmin",
+                      help="Sealed gas tanks swing between this and the highest pressure as they discharge and "
+                           "charge. Kept above 1 bar so a leak never pulls air in, and so the hydrogen electrode "
+                           "still delivers power at the end of discharge. Hydride and piston storage hold one "
+                           "constant pressure and ignore it.")
+    default("cfg_rte", BASE["use"]["rte_target"])
+    rte = st.slider("Round-trip efficiency it must keep", 0.5, 0.95, step=0.01, key="cfg_rte")
+    default("cfg_life", BASE["design"]["lifetime_years"])
+    life = st.slider("Lifetime, years", 5, 40, key="cfg_life")
+    default("cfg_elec", BASE["design"]["electricity_usd_kwh"])
+    elec = st.number_input("Charging electricity, USD/kWh", 0.0, 1.0, key="cfg_elec")
+    with st.expander("Ranking weights"):
+        st.caption("How much each criterion counts in the ranking score, relative to the others: "
+                   "0 = ignored, 5 = most important. Only ratios matter: cost 3 and mass 0.5 means cost "
+                   "counts 6x as much as weight. They change the order of the list, not the physics.")
+        WEIGHT_HELP = {
+            "cost": ("Cost", "Build cost per kWh (materials, tank, stack, catalyst, electronics)."),
+            "efficiency": ("Efficiency", "Share of the charging energy you get back."),
+            "safety": ("Safety", "Penalties for toxic or radioactive species, water splitting, unstable chemistry."),
+            "charge_speed": ("Charge speed", "How fast it can be recharged compared with your target."),
+            "reversibility": ("Rechargeability", "Penalty when discharge makes very stable products (N2, CO2...) that are hard to turn back."),
+            "closure": ("No maintenance", "Penalty when side reactions slowly move material out of the couple (needs topping up)."),
+            "supply": ("Supply risk", "Penalty when an element is mined in only a few countries."),
+            "volume": ("Volume", "Litres per kWh of the whole system."),
+            "mass": ("Weight", "kg per kWh of the whole system (tank, hydrogen, chemicals, stack). Raise it for vehicles."),
+        }
+        for k in WEIGHT_HELP:
+            default(f"w_{k}", float(BASE["ranking"][k]))
+        weights = {k: st.slider(WEIGHT_HELP[k][0], 0.0, 5.0, step=0.5, help=WEIGHT_HELP[k][1], key=f"w_{k}")
+                   for k in WEIGHT_HELP}
+    default("cfg_scale", BASE["design"]["production_scale"])
+    st.radio("Built as", list(stackcost.SCALES), key="cfg_scale", format_func=stackcost.SCALES.get,
+             help="How many are made changes what each part costs. Li-ion prices are for mass production.")
+    with st.expander("Prices the model uses (estimated, with sources)"):
+        for kind_, label_ in (("gas", "Cell with a hydrogen-gas electrode"), ("liquid", "Two-liquid cell (two tanks)")):
+            e_ = stackcost.stack(kind_, SS["cfg_scale"])
+            st.markdown(f"**{label_}:** {e_.range_text('USD per m2 of cell')}  \n<small>{e_.basis}</small>",
+                        unsafe_allow_html=True)
+        pe_ = stackcost.POWER_ELECTRONICS
+        st.markdown(f"**Power electronics:** {pe_.range_text('USD per kW')}  \n<small>{pe_.basis}</small>",
+                    unsafe_allow_html=True)
+        st.markdown("**Tanks, pumps, pipes (liquid cells):** itemised prices of a built 10 kW flow battery "
+                    "(Noack et al. 2016: tanks 1.1 EUR per litre, pumps, piping, valves, heat exchangers, sensors), "
+                    "scaled with size^0.6.")
+        st.markdown("**Molecules:** estimated for each molecule from how hard it is to make (shown in its details).")
+    default("cfg_topn", 20)
+    top_n = st.slider("Candidates to size in detail", 5, 60, key="cfg_topn")
+    st.caption("Settings are saved automatically and come back after a page reload.")
+
+def make_targets(s: dict) -> dict:
+    """Model inputs from the sidebar values (also used by the one-setting sweep)."""
+    t_ = copy.deepcopy(BASE)
+    pmx, pmn = float(s["p_max"]), float(s["p_min"])
+    t_["use"].update(p_max_bar=pmx, p_min_bar=pmn, rte_target=float(s["rte"]),
+                     charge_hours_target=s["charge_hours_target"],
+                     pressure_grid_bar=sorted({x for x in [3, 5, 10, 20, 30, 45, 60, 100, 150, 200]
+                                               if pmn < x <= pmx} | {pmx}))
+    t_["design"].update(power_kw=float(s["power"]), hours=float(s["hours"]), lifetime_years=int(s["life"]),
+                        electricity_usd_kwh=float(s["elec"]), production_scale=s["scale"],
+                        stack_usd_m2=stackcost.stack("gas", s["scale"]).usd,
+                        stack_usd_m2_liquid=stackcost.stack("liquid", s["scale"]).usd,
+                        power_electronics_usd_kw=stackcost.POWER_ELECTRONICS.usd)
+    t_["ranking"].update(s["weights"])
+    return t_
+
+
+SETTINGS_NOW = dict(power=power, hours=hours, p_max=p_max, p_min=p_min, rte=rte, life=life, elec=elec,
+                    scale=SS["cfg_scale"], weights=weights, charge_hours_target=pre["charge_hours_target"])
+t = make_targets(SETTINGS_NOW)
+E_KWH = power * hours
+
+
+MODEL_VERSION = 7   # bump when model outputs change shape, so cached results are recomputed
+
+
+def tkey(t_: dict) -> str:
+    return json.dumps({**t_, "_model_version": MODEL_VERSION}, sort_keys=True)
+
+
+@st.cache_data(show_spinner=False)
+def screen(targets_repr: str):
+    tt = json.loads(targets_repr)
+    cells = discover.table_pairs()
+    return rank.rank(cells, tt)
+
+
+@st.cache_data(show_spinner=False)
+def size(targets_repr: str, names: tuple[str, ...], extra_smiles: tuple[str, ...]):
+    tt = json.loads(targets_repr)
+    rng = np.random.default_rng(3)
+    by_name = {c.name: c for c in discover.table_pairs()}
+    cells = [by_name[n] for n in names if n in by_name]
+    for s in extra_smiles:
+        r = M.evaluate(s)
+        if math.isfinite(r.e0):
+            cells.append(M.as_cell(r))
+    return [design.design(c, tt, rng) for c in cells]
+
+
+def design_rows(designs):
+    rows = []
+    for d in designs:
+        b = d.best
+        if b is None:
+            continue
+        cmp = reference.compare(b, E_KWH, REF)
+        rows.append({
+            "couple": d.cell.name, "origin": d.cell.origin, "medium": d.cell.medium,
+            "E0 V": round(d.cell.e0, 3),
+            "best p bar": b.p_max_bar,
+            "Wh/kg (system)": round(E_KWH * 1000 / b.mass_kg, 1),
+            "Wh/L (system)": round(E_KWH * 1000 / b.volume_l, 1),
+            "build USD/kWh": round(b.capex_usd_kwh),
+            "LCOS USD/kWh": round(b.lcos_usd_kwh, 3),
+            "RTE p50": round(b.rte_band[1], 2), "RTE p10": round(b.rte_band[0], 2), "RTE p90": round(b.rte_band[2], 2),
+            "fastest charge h": round(b.min_charge_h, 2),
+            "kg per kWh": round(b.mass_kg / E_KWH, 2),
+            "kg per kW": round(b.mass_kg / power, 2),
+            "stack kg per kW": round(b.parts_kg.get("stack", 0) / power, 3),
+            "burst kg TNT": round(b.safety.burst_tnt_kg, 2),
+            "leak g/s (1 mm2)": round(b.safety.leak_g_s, 2),
+            "H2 refill years": round(b.years_to_refill) if math.isfinite(b.years_to_refill) else "never",
+            "chemistry drifts": "; ".join(d.drift) or "no",
+            **{f"vs Li-ion: {k}": v for k, v in cmp.items()},
+        })
+    return pd.DataFrame(rows)
+
+
+def render_couple(d, kp: str):
+    """Everything about one sized couple (used by the detail tab and the pop-up)."""
+    b = d.best
+    st.write(f"**{d.cell.name}** — {d.cell.origin}, {d.cell.medium}; E0 {d.cell.e0:.3f} V; data: {d.cell.source}")
+    cmp = reference.compare(b, E_KWH, REF)
+    cols = st.columns(len(cmp))
+    for c, (k, v) in zip(cols, cmp.items()):
+        c.metric(f"vs Li-ion: {k}", v)
+    P = pd.DataFrame([{"p_max bar": p.p_max_bar, "mass kg": p.mass_kg, "volume L": p.volume_l,
+                       "build USD/kWh": p.capex_usd_kwh, "LCOS USD/kWh": p.lcos_usd_kwh,
+                       "burst kg TNT": p.safety.burst_tnt_kg, "leak g/s": p.safety.leak_g_s,
+                       "H2 loss %/yr": p.h2_loss_per_year * 100, "RTE": p.rte} for p in d.points])
+    fig = make_subplots(rows=2, cols=4, subplot_titles=list(P.columns[1:]))
+    for k, col in enumerate(P.columns[1:]):
+        fig.add_trace(go.Scatter(x=P["p_max bar"], y=P[col], mode="lines+markers", name=col),
+                      row=k // 4 + 1, col=k % 4 + 1)
+    fig.update_layout(height=520, showlegend=False, title="Everything vs maximum hydrogen pressure")
+    st.plotly_chart(fig, width="stretch", key=f"{kp}_press")
+    a, c = st.columns(2)
+    pw, hr = d.ragone
+    rg = go.Figure(go.Scatter(x=pw, y=hr, mode="lines", name="this design"))
+    rg.add_vline(x=math.log10(power), line_dash="dot", annotation_text="design power")  # log axis: exponent
+    rg.update_layout(xaxis_title="power delivered, kW", yaxis_title="how long, hours",
+                     xaxis_type="log", yaxis_type="log", title="Power delivery vs duration (built system)")
+    a.plotly_chart(rg, width="stretch", key=f"{kp}_rag")
+    cv = d.curve
+    ef = go.Figure()
+    ef.add_trace(go.Scatter(x=cv["i"], y=cv["rte"], name="round-trip efficiency"))
+    ef.add_trace(go.Scatter(x=cv["i"], y=cv["v_dis"], name="discharge voltage, V", yaxis="y2"))
+    ef.update_layout(xaxis_type="log", xaxis_title="current density, A/cm2",
+                     yaxis2=dict(overlaying="y", side="right"), title=f"Efficiency and voltage ({cv['p_bar']} bar, nominal inputs)")
+    c.plotly_chart(ef, width="stretch", key=f"{kp}_eff")
+    show_cost(b.cost_parts, {"i_a_cm2": b.i_a_cm2, "area_m2": b.area_m2, "p_max_bar": b.p_max_bar,
+                             "v_dis": b.v_dis, "synth": b.synth}, kp)
+    names = {"active": "chemicals", "electrolyte": "water / electrolyte", "vessel": "hydrogen tank (steel)",
+             "hydrogen": "hydrogen gas", "stack": "cell stack"}
+    rows = []
+    for p in d.points:
+        for k, v in p.parts_kg.items():
+            rows.append({"max pressure, bar": p.p_max_bar, "part": names.get(k, k), "kg per kWh": v / E_KWH})
+    wf = px.bar(pd.DataFrame(rows), x="max pressure, bar", y="kg per kWh", color="part",
+                title="Weight per kWh stored vs maximum hydrogen pressure: the tank gets smaller but thicker-walled, "
+                      "so its weight levels off")
+    wf.add_hline(y=1000 / LI["wh_kg"], line_dash="dash", line_color="red",
+                 annotation_text=f"Li-ion pack {1000 / LI['wh_kg']:.1f} kg/kWh")
+    wf.update_xaxes(type="category")
+    st.plotly_chart(wf, width="stretch", key=f"{kp}_wparts")
+    if any(p.tank_volume_l for p in d.points):
+        st.markdown("**Gas and tank vs pressure** (one cylindrical steel tank, length = 3 x diameter)")
+        st.caption("Wall thickness = pressure x radius / allowed steel stress. Higher pressure: smaller tank, "
+                   "thicker wall; the two almost cancel in the steel weight. At low pressure much of the tank "
+                   "holds gas that never leaves (the 'empty' pressure), so the tank must be larger.")
+        st.dataframe(pd.DataFrame([{
+            "max pressure, bar": p.p_max_bar,
+            "hydrogen gas, kg/kWh": round(p.h2_kg / E_KWH, 4),
+            "tank volume, L/kWh": round(p.tank_volume_l / E_KWH, 1),
+            "tank diameter, m": round(p.tank_diameter_m, 2),
+            "wall thickness, mm": round(p.wall_mm, 1),
+            "tank steel, kg/kWh": round(p.parts_kg.get("vessel", 0) / E_KWH, 2),
+            "tank + gas, kg/kWh": round((p.parts_kg.get("vessel", 0) + p.h2_kg) / E_KWH, 2)}
+            for p in d.points]), hide_index=True, width="stretch")
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Weight per kWh stored", f"{b.mass_kg / E_KWH:.1f} kg/kWh", f"{b.mass_kg / E_KWH - 1000 / LI['wh_kg']:+.1f} vs Li-ion",
+              delta_color="inverse")
+    k2.metric("Weight per kW of power", f"{b.mass_kg / power:.1f} kg/kW",
+              help="Whole system divided by its power. For long storage this is dominated by the stored energy, not the power.")
+    k3.metric("Cell stack per kW", f"{b.parts_kg.get('stack', 0) / power:.2f} kg/kW",
+              help="Only the part that sets the power: the stack of cells. The tank does not change it.")
+    st.plotly_chart(px.pie(names=list(b.parts_kg), values=list(b.parts_kg.values()),
+                           title=f"Mass at {b.p_max_bar:g} bar: {b.mass_kg:,.0f} kg"), width="content", key=f"{kp}_pie")
+    st.markdown("**Maintenance and chemical closure**")
+    st.write("Inventory drift: " + ("; ".join(d.drift) if d.drift else "no drift path found in the data (measured and derived half-reactions)"))
+    st.write("Recombination: " + "; ".join(d.recombination))
+    st.write(f"H2 loss {b.h2_loss_per_year * 100:.4f} %/yr (permeation upper bound + seals) → refill after "
+             f"{b.years_to_refill:,.0f} years")
+    st.markdown("**Inputs and where they come from**")
+    st.dataframe(pd.DataFrame([{"input": k, "kind": v.kind, "low": v.low, "high": v.high, "source": v.source}
+                               for k, v in d.params.items()]), hide_index=True, width="stretch")
+
+
+
+
+def ck(key: str) -> str:
+    """Widget key of a clickable chart or table (changes after each click)."""
+    return f"{key}_{st.session_state.get(f'nonce_{key}', 0)}"
+
+
+def _points(event):
+    try:
+        sel = event.selection
+        return sel.get("points", []) if isinstance(sel, dict) else getattr(sel, "points", [])
+    except Exception:
+        return []
+
+
+def take(event, key: str, kind: str):
+    """A chart was clicked: remember which candidate; the pop-up opens at the
+    end of the page run. The chart is redrawn unselected next time."""
+    pts = _points(event)
+    if pts:
+        SS[f"nonce_{key}"] = SS.get(f"nonce_{key}", 0) + 1     # always consume the click
+        cd = pts[0].get("customdata")
+        if cd is not None:
+            SS["pending_dialog"] = (kind, list(cd) if isinstance(cd, (list, tuple)) else [cd])
+
+
+def take_row(event, key: str, kind: str):
+    try:
+        sel = event.selection
+        rows = sel.get("rows", []) if isinstance(sel, dict) else getattr(sel, "rows", [])
+    except Exception:
+        rows = []
+    values = SS.get(f"rows_{key}", [])
+    if rows:
+        SS[f"nonce_{key}"] = SS.get(f"nonce_{key}", 0) + 1     # always consume the click
+        if rows[0] < len(values):
+            SS["pending_dialog"] = (kind, list(values[rows[0]]))
+
+
+CLICKABLE = ["best_tbl", "f1", "f2", "f3", "molsc", "mol_tbl", "pairsc", "pair_tbl", "mol_prog", "pair_prog"]
+
+
+def click_waiting() -> bool:
+    """True when a chart or table holds a click the page has not acted on yet."""
+    for k in CLICKABLE:
+        stt = SS.get(ck(k))
+        if not stt:
+            continue
+        try:
+            sel = stt.get("selection", {}) if isinstance(stt, dict) else getattr(stt, "selection", {})
+            if (sel.get("points") or sel.get("rows")):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def running_any() -> bool:
+    return any(c.thread is not None and c.thread.is_alive() for c in search_controls().values())
+
+
+def open_pending_dialog():
+    pend = SS.pop("pending_dialog", None)
+    if not pend:
+        return
+    kind, v = pend
+    if kind == "couple":
+        couple_dialog(v[0])
+    elif kind == "molecule":
+        molecule_dialog(v[0])      # extra ids (if any) are ignored
+    elif kind == "pair":
+        pair_dialog(v[0], v[1])
+
+
+@st.cache_data(show_spinner=False)
+def molecule_options(targets_json: str, smiles: str):
+    tt = json.loads(targets_json)
+    r = ai_search.load_store().get(smiles) or M.evaluate(smiles)
+    return options.configurations(M.as_cell(r), tt, np.random.default_rng(11)) if math.isfinite(r.e0) else []
+
+
+def show_cost(parts: dict, ctx: dict, kp: str):
+    """Build cost split by part, and why it is high (with the setting to change)."""
+    if not parts:
+        return
+    ctx = {"e_kwh": E_KWH, "power_kw": power, "li_usd_kwh": LI["usd_kwh_stationary"],
+           "stack_est": stackcost.stack(ctx.pop("stack_kind", "gas"), t["design"]["production_scale"]), **ctx}
+    df_ = pd.DataFrame([{"part": k, "USD per kWh": v / E_KWH} for k, v in parts.items() if v > 0])
+    fc = px.bar(df_.sort_values("USD per kWh"), x="USD per kWh", y="part", orientation="h",
+                title=f"Where the build cost goes ({sum(parts.values()) / E_KWH:,.0f} USD/kWh)")
+    fc.add_vline(x=LI["usd_kwh_stationary"], line_dash="dash", line_color="red",
+                 annotation_text=f"Li-ion pack {LI['usd_kwh_stationary']:.0f}")
+    fc.update_layout(height=280, margin=dict(l=10, r=10, t=40, b=10))
+    st.plotly_chart(fc, width="stretch", key=f"{kp}_cost")
+    st.markdown("**Why it costs this much**\n" + "\n".join(f"- {x}" for x in explain.explain_cost(parts, ctx)))
+
+
+def band_text(band) -> str:
+    """'lo-hi' build cost in USD/kWh over the reaction-speed range."""
+    if not band:
+        return ""
+    f = lambda x: f"{x:,.0f}" if math.isfinite(x) else "not buildable"
+    return f"{f(band[0])}-{f(band[2])}"
+
+
+def li_metrics(c, kp: str):
+    cols = st.columns(4)
+    cols[0].metric("Energy per kg", f"{c.wh_kg:.0f} Wh/kg", f"{c.wh_kg - LI['wh_kg']:+.0f} vs Li-ion")
+    cols[1].metric("Energy per litre", f"{c.wh_l:.0f} Wh/L", f"{c.wh_l - LI['wh_l']:+.0f} vs Li-ion")
+    v_, d_, h_ = explain.cost_range(c.capex_usd_kwh, c.capex_band, LI["usd_kwh_stationary"])
+    cols[2].metric("Build cost", v_, d_, delta_color="inverse", help=h_)
+    cols[3].metric("Recharge", f"{c.recharge_h * 60:.0f} min", f"{c.recharge_h * 60 * 0.7 - LI['charge_min_10_80']:+.0f} vs Li-ion 10-80 %",
+                   delta_color="inverse")
+
+
+def draw(smiles_list, legends):
+    from rdkit import Chem
+    from rdkit.Chem import Draw
+    mols = [Chem.MolFromSmiles(x) for x in smiles_list]
+    return Draw.MolsToGridImage(mols, molsPerRow=min(4, len(mols)), subImgSize=(260, 200), legends=legends)
+
+
+def render_molecule(smiles: str, kp: str):
+    r = ai_search.load_store().get(smiles) or next((x for x in view_pool("mol") + view_pool("pair")
+                                                    if x.smiles == smiles), None) or M.evaluate(smiles)
+    st.markdown(f"**{r.smiles}** — {'never reported (not in PubChem)' if r.in_pubchem is False else 'known compound' if r.in_pubchem else 'novelty not checked'}")
+    steps = r.steps or [r.e0]
+    st.image(draw([r.smiles] + r.forms, ["charged (oxidised)"] + [f"+{i + 1} H2 at {e:.2f} V" for i, e in enumerate(steps)]))
+    sf = go.Figure(go.Bar(x=[f"H2 #{i + 1}" for i in range(len(steps))], y=steps))
+    sf.add_hline(y=1.229 + 0.4, line_dash="dash", line_color="red", annotation_text="water splits above (O2)")
+    sf.add_hline(y=-0.3, line_dash="dash", line_color="red", annotation_text="water splits below (H2)")
+    sf.update_layout(title="Voltage of each hydrogen uptake (V vs SHE)", height=300)
+    st.plotly_chart(sf, width="stretch", key=f"{kp}_steps")
+    c = st.columns(5)
+    c[0].metric("H2 per molecule used", r.best_k)
+    c[1].metric("Solubility (ESOL)", f"{r.solubility_mol_l:.2f} M")
+    c[2].metric("Synthesis difficulty", f"{r.sa:.1f} / 10")
+    e_mean = sum(steps[:r.best_k]) / r.best_k
+    c[3].metric("Must cost below", f"${pairs.CHEMICAL_SHARE * LI['usd_kwh_stationary'] / pairs.kg_per_kwh(r.mw, max(e_mean, 0.05), 2 * r.best_k):.1f}/kg")
+    sc = synthesis.estimate(r.smiles, t["synthesis"])
+    c[4].metric("Estimated price", f"${sc.usd_kg:,.0f}/kg", help=sc.describe())
+    if r.notes:
+        st.warning("; ".join(r.notes))
+    st.markdown("**Built as a battery against hydrogen, every storage option, vs lithium-ion**")
+    cfgs = molecule_options(tkey(t), r.smiles)
+    if cfgs:
+        best = min(cfgs, key=lambda x: x.lcos_usd_kwh)
+        li_metrics(best, kp)
+        k_ = max(r.best_k, 1)
+        show_cost(best.cost_parts, {"i_a_cm2": best.i_a_cm2, "area_m2": best.area_m2, "v_dis": best.v_dis,
+                                    "p_max_bar": best.store.p_design_pa / 1e5 if best.store.kind != "none" else None,
+                                    "chem_kg_per_kwh": pairs.kg_per_kwh(r.mw, max(sum(steps[:k_]) / k_, 0.05), 2 * k_),
+                                    "chem_usd_kg": sc.usd_kg, "synth": best.synth}, kp)
+        st.dataframe(pd.DataFrame([{"option": x.name, "Wh/kg": round(x.wh_kg, 1), "Wh/L": round(x.wh_l, 1),
+                                    "build USD/kWh": round(x.capex_usd_kwh),
+                                    "build p10-p90 (reaction speed)": band_text(x.capex_band),
+                                    "LCOS": round(x.lcos_usd_kwh, 3),
+                                    "efficiency": f"{x.rte:.2f} ({x.rte_band[0]:.2f}-{x.rte_band[2]:.2f})",
+                                    "recharge min": round(x.recharge_h * 60), "burst kg TNT": round(x.store.burst_tnt_kg, 3)}
+                                   for x in cfgs]), hide_index=True, width="stretch")
+    else:
+        st.info("Cannot be built: no voltage inside the water window or no usable hydrogen uptake.")
+
+
+def render_pair(pr, kp: str):
+    st.markdown(f"**Negative** {pr.neg.smiles} (releases {pr.kn} H2, steps {', '.join(f'{x:.2f}' for x in (pr.neg.steps or [pr.neg.e0]))} V)  \n"
+                f"**Positive** {pr.pos.smiles} (takes {pr.kp} H2, steps {', '.join(f'{x:.2f}' for x in (pr.pos.steps or [pr.pos.e0]))} V)")
+    st.image(draw([pr.neg.smiles, pr.pos.smiles], ["negative", "positive"]))
+    c = st.columns(6)
+    c[0].metric("Cell voltage", f"{pr.voltage:.2f} V")
+    c[1].metric("Liquids", f"{pr.wh_l:.0f} Wh/L", f"{pr.wh_l - LI['wh_l']:+.0f} vs Li-ion pack")
+    c[2].metric("Must cost below", f"${pairs.price_ceiling_usd_kg(pr, LI['usd_kwh_stationary']):.1f}/kg")
+    c[3].metric("Free hydrogen", "none")
+    sn, sp_ = synthesis.estimate(pr.neg.smiles, t["synthesis"]), synthesis.estimate(pr.pos.smiles, t["synthesis"])
+    c[4].metric("Negative costs", f"${sn.usd_kg:,.0f}/kg",
+                help=f"Estimated price to make the negative molecule: {sn.describe()}.")
+    c[5].metric("Positive costs", f"${sp_.usd_kg:,.0f}/kg",
+                help=f"Estimated price to make the positive molecule: {sp_.describe()}.")
+    st.caption("; ".join(pr.notes + pr.neg.notes + pr.pos.notes))
+    cfg = options.pair_configuration(pr, t, np.random.default_rng(13))
+    st.markdown("**Built as a full battery, vs lithium-ion**")
+    if cfg is None:
+        st.info("Cannot be charged inside the water window.")
+    else:
+        li_metrics(cfg, kp)
+        show_cost(cfg.cost_parts, {"i_a_cm2": cfg.i_a_cm2, "area_m2": cfg.area_m2, "v_dis": cfg.v_dis,
+                                   "chem_kg_per_kwh": pairs.kg_per_kwh(pr.neg.mw, pr.voltage, 2 * pr.kn)
+                                   + pairs.kg_per_kwh(pr.pos.mw, pr.voltage, 2 * pr.kp), "synth": cfg.synth,
+                                   "stack_kind": "liquid"}, kp)
+        st.write(f"Efficiency {cfg.rte:.2f} (p10-p90 {cfg.rte_band[0]:.2f}-{cfg.rte_band[2]:.2f}); "
+                 f"lifetime cost {cfg.lcos_usd_kwh:.3f} USD/kWh; mass {cfg.mass_kg:,.0f} kg, volume {cfg.volume_l:,.0f} L.")
+
+
+@st.cache_resource
+def search_controls():
+    runs.mark_interrupted()          # runs once per app start
+    return {"positive": ai_search.Control(), "pair": ai_search.Control()}
+
+
+def search_panel(mode: str, kw: dict, kp: str):
+    """Start / Pause-Resume / Stop / Reset buttons and a live progress chart."""
+    ctl = search_controls()[mode]
+    running = ctl.thread is not None and ctl.thread.is_alive()
+    b1, b2, b3, b4 = st.columns(4)
+    if b1.button("Start", type="primary", disabled=running, key=f"{kp}_start", width="stretch"):
+        ctl.history.clear()
+        rid = runs.new_run(mode, {k: SS[k] for k in SETTING_KEYS if k in SS}, kw)
+        ctl.on_update = lambda c, store, rid=rid: runs.update_run(rid, c, store)
+        ai_search.start_background(ctl, mode=mode, **kw)
+        SS[f"{kp}_view_run"] = None
+        st.rerun()
+    if b2.button("Resume" if ctl.paused else "Pause", disabled=not running, key=f"{kp}_pause", width="stretch"):
+        ctl.paused = not ctl.paused
+        st.rerun()
+    if b3.button("Stop", disabled=not running, key=f"{kp}_stop", width="stretch"):
+        ctl.stopped, ctl.paused = True, False
+        st.rerun()
+    with b4.popover("Reset", disabled=running, width="stretch"):
+        st.write("Start over with an empty molecule list. The current results are kept as a dated backup "
+                 "file in cache/; computed energies stay cached.")
+        if st.button("Yes, reset", key=f"{kp}_reset"):
+            for c in search_controls().values():
+                c.history.clear()
+                c.status = "idle"
+            ai_search.reset_store()
+            st.rerun()
+    default(f"{kp}_live", True)
+    live = st.toggle("Live progress (refresh every 2 s)", key=f"{kp}_live",
+                     help="While on, the progress panel refreshes itself every 2 seconds, and clicks on charts "
+                          "can be lost. Turn it off to explore results while the search keeps running in the "
+                          "background; turn it on again to watch progress.") if running else False
+    if running and live:
+        st.fragment(live_progress, run_every=2)(mode, kp)
+    else:
+        live_progress(mode, kp)
+    saved = runs.list_runs(mode)
+    with st.expander(f"Saved searches ({len(saved)})"):
+        if not saved:
+            st.caption("Every search you start is saved here with its settings and results.")
+        else:
+            ids = [r["id"] for r in saved]
+            pick = st.selectbox("Search", ids, format_func=lambda i: runs.label(next(r for r in saved if r["id"] == i)),
+                                key=f"{kp}_runpick")
+            rec = next(r for r in saved if r["id"] == pick)
+            c1, c2, c3 = st.columns(3)
+            c1.button("Restore these settings", key=f"{kp}_restore", on_click=restore_settings, args=(rec,),
+                      width="stretch", help="Puts back every setting this search was started with (sidebar and search).")
+            if c2.button("Show only this search's results", key=f"{kp}_view", width="stretch"):
+                SS[f"{kp}_view_run"] = pick
+                st.rerun()
+            any_running = any(c.thread is not None and c.thread.is_alive() for c in search_controls().values())
+            with c3.popover("Delete", disabled=any_running, width="stretch",
+                            help="Removes this saved search and its results" + (" (stop the running search first)" if any_running else "")):
+                st.write(f"Delete the saved search started {rec['started']} and its "
+                         f"{len(rec.get('molecules', []))} molecules?")
+                also = st.checkbox("Also remove its molecules from the library", value=True, key=f"{kp}_delmols_{pick}",
+                                   help="Molecules that another saved search also found are kept.")
+                st.caption("The record and its results move to cache/runs/trash/, so they can be recovered.")
+                if st.button("Yes, delete", key=f"{kp}_delete_{pick}"):
+                    if also:
+                        n_ = runs.remove_results(rec)
+                        st.toast(f"{n_} molecules removed from the library")
+                    runs.delete_run(pick)
+                    for k_ in ("mol_view_run", "pair_view_run"):
+                        if SS.get(k_) == pick:
+                            SS[k_] = None
+                    st.rerun()
+            st.json({"settings": rec.get("settings", {}), "search": rec.get("search", {})}, expanded=False)
+    vr = SS.get(f"{kp}_view_run")
+    if vr:
+        rec = next((r for r in saved if r["id"] == vr), None)
+        if rec:
+            a, b = st.columns([4, 1])
+            a.info(f"Showing only the results of the search started {rec['started']} "
+                   f"({len(rec.get('molecules', []))} molecules).")
+            if b.button("Show all", key=f"{kp}_viewall", width="stretch"):
+                SS[f"{kp}_view_run"] = None
+                st.rerun()
+
+
+def view_pool(kp: str) -> list:
+    """Molecules to show: one saved search's results, or the whole library."""
+    vr = SS.get(f"{kp}_view_run")
+    if vr:
+        rec = next((r for r in runs.list_runs() if r["id"] == vr), None)
+        if rec:
+            out = []
+            for d_ in rec.get("molecules", []):
+                try:
+                    out.append(M.MolResult(**d_))
+                except TypeError:
+                    continue
+            return out
+    return library_snapshot()
+
+
+def library_snapshot() -> list:
+    """The molecule library as shown on the page. While a search runs it is
+    re-read only when a generation finishes, so charts do not change under
+    the mouse (a chart whose data changes loses its click)."""
+    ctls = search_controls().values()
+    if not any(c.thread is not None and c.thread.is_alive() for c in ctls):
+        SS.pop("snap_sig", None)
+        return list(ai_search.load_store().values())
+    sig = tuple(len(c.history) for c in ctls)
+    if SS.get("snap_sig") != sig or "snap_pool" not in SS:
+        SS["snap_pool"] = list(ai_search.load_store().values())
+        SS["snap_sig"] = sig
+    return SS["snap_pool"]
+
+
+def live_progress(mode: str, kp: str):
+    # During the panel's own 2-second refresh (not a full page run) a click on a
+    # chart elsewhere would wait unseen: hand it to a full page run. Never do
+    # this inside a full run, or the page would restart itself endlessly.
+    if not SS.get("_full_run") and (click_waiting() or SS.get("pending_dialog")):
+        st.rerun(scope="app")
+    ctl = search_controls()[mode]
+    last = st.session_state.get(f"{kp}_status")
+    st.session_state[f"{kp}_status"] = ctl.status
+    if last == "running" and ctl.status in ("finished", "stopped", "failed"):
+        st.rerun()                       # refresh tables with the new molecules
+    label = {"idle": "not running", "running": "running", "paused": "paused",
+             "finished": "finished", "stopped": "stopped (results so far are kept)", "failed": "failed"}
+    st.caption(f"Status: **{label.get(ctl.status, ctl.status)}**"
+               + (f" — {ctl.history[-1]['molecules']} molecules in the library" if ctl.history else "")
+               + (f" — {ctl.error}" if ctl.error else ""))
+    gens_total = getattr(ctl, "generations", 0)
+    if ctl.status in ("running", "paused") and gens_total:
+        import time as _t
+        phase = getattr(ctl, "phase", "")
+        done, size = getattr(ctl, "done_in_phase", 0), getattr(ctl, "phase_size", 0)
+        gen = getattr(ctl, "generation", 0)
+        batch = max(getattr(ctl, "batch", 1), 1)
+        if phase == "starting molecules":
+            frac = 0.0
+            text = f"Computing the starting molecules: {done} of {size}"
+        else:
+            frac = ((gen - 1) * batch + min(done, batch)) / (gens_total * batch)
+            text = f"Generation {gen} of {gens_total} — molecule {min(done + 1, size)} of {size} in this generation"
+        st.progress(min(max(frac, 0.0), 1.0), text=text)
+        elapsed = _t.time() - getattr(ctl, "started", _t.time())
+        eta = ai_search.eta_seconds(ctl) if hasattr(ai_search, "eta_seconds") else None
+        fmt = lambda x: f"{int(x // 3600)} h {int(x % 3600 // 60)} min" if x >= 3600 else f"{int(x // 60)} min {int(x % 60)} s"
+        n_t = len(getattr(ctl, "mol_times", []))
+        st.caption(f"Elapsed {fmt(elapsed)}"
+                   + (f" — about {fmt(eta)} left (average {sum(ctl.mol_times) / n_t:.0f} s per molecule over {n_t})"
+                      if eta is not None else " — time left: estimated after the first molecule")
+                   + (" — paused: the clock keeps running" if ctl.status == "paused" else ""))
+    elif ctl.status in ("running", "paused"):
+        st.caption(f"{len(ctl.history)} generation(s) completed. This run started before progress tracking was "
+                   "added; the next run shows the progress bar and time left.")
+    if ctl.history:
+        unit = "Wh per litre of both liquids" if mode == "pair" else "Wh per litre of charged electrolyte"
+        kind = "pair" if mode == "pair" else "molecule"
+        fallback = None
+        if any(not h.get("best_id") for h in ctl.history):     # runs from before best_id was recorded
+            if mode == "pair":
+                bp = pairs.best_pairs(view_pool("pair"), 1)
+                fallback = [bp[0].neg.smiles, bp[0].pos.smiles] if bp else None
+            else:
+                top = max(view_pool("mol"), key=lambda r: r.objective, default=None)
+                fallback = [top.smiles] if top else None
+        ids = [h.get("best_id") or fallback for h in ctl.history]
+        keep = [i for i, x in enumerate(ids) if x]
+        gx = [ctl.history[i]["generation"] for i in keep]
+        gy = [ctl.history[i]["best"] for i in keep]
+        f = px.scatter(pd.DataFrame({"generation": gx, "best": gy,
+                                     "candidate": [" | ".join(ids[i]) for i in keep],
+                                     "id0": [ids[i][0] for i in keep],
+                                     "id1": [ids[i][-1] for i in keep]}),
+                       x="generation", y="best", hover_data=["candidate"], custom_data=["id0", "id1"])
+        f.update_traces(marker=dict(size=12))
+        f.add_trace(go.Scatter(x=gx, y=gy, mode="lines", hoverinfo="skip", showlegend=False))
+        f.add_hline(y=LI["wh_l"], line_dash="dash", line_color="red", annotation_text=f"Li-ion car pack {LI['wh_l']:.0f} Wh/L")
+        f.update_layout(xaxis_title="generation", yaxis_title=unit, height=340,
+                        title="Search progress vs lithium-ion (click a point: best candidate at that generation)")
+        evg = st.plotly_chart(f, width="stretch", on_select="rerun", selection_mode="points", key=ck(f"{kp}_prog"))
+        take(evg, f"{kp}_prog", kind)
+    if not SS.get("_full_run") and SS.get("pending_dialog"):
+        st.rerun(scope="app")            # progress chart clicked during a panel refresh
+
+
+def pin_button(kind: str, ids: list):
+    """Add or remove this candidate from the interesting-candidates list."""
+    item = [kind, *ids]
+    wl = list(SS.get("watchlist") or [])
+    if item in wl:
+        if st.button("Remove from interesting candidates", key=f"unwatch_{kind}"):
+            SS["watchlist"] = [x for x in wl if x != item]
+            st.rerun()
+        st.caption("In the ⭐ Interesting candidates tab, recalculated whenever you change a setting.")
+    elif st.button("⭐ Add to interesting candidates", key=f"watch_{kind}", type="primary",
+                   help="Puts it in the ⭐ Interesting candidates tab, where all of them are recalculated and "
+                        "compared every time you change a setting on the left."):
+        SS["watchlist"] = wl + [item]
+        st.rerun()
+
+
+@st.dialog("Candidate detail", width="large")
+def couple_dialog(name: str):
+    st.session_state["selected_couple"] = name
+    d = next((x for x in designs if x.cell.name == name), None)
+    if d is None or d.best is None:
+        st.info("This couple was not sized.")
+    else:
+        pin_button("couple", [name])
+        render_couple(d, "dlg")
+
+
+@st.dialog("Molecule detail", width="large")
+def molecule_dialog(smiles: str):
+    pin_button("molecule", [smiles])
+    render_molecule(smiles, "mdlg")
+
+
+@st.dialog("Pair detail", width="large")
+def pair_dialog(neg: str, pos: str):
+    pool_ = view_pool("pair")
+    pr = next((p for p in pairs.best_pairs(pool_, 200) if p.neg.smiles == neg and p.pos.smiles == pos), None)
+    if pr is None:
+        st.info("Pair no longer available.")
+    else:
+        pin_button("pair", [neg, pos, pr.kn, pr.kp])
+        render_pair(pr, "pdlg")
+
+
+st.title("Hydrogen battery simulator")
+st.caption("Candidates come from thermodynamic data and physical laws; every result is compared with the "
+           "lithium-ion packs in current cars (Tesla NMC/NCA, BYD Blade LFP).")
+
+TAB_NAMES = ["⭐ Interesting candidates", "Gas batteries (sealed)", "Best candidates", "Trade-offs", "Candidate detail", "Storage and recharge options",
+             "AI molecule discovery", "Two-molecule batteries (no gas)", "Li-ion reference and validation"]
+if SS.get("cfg_tab") not in TAB_NAMES:
+    SS["cfg_tab"] = TAB_NAMES[0]
+# the open tab is a saved setting, so a page reload comes back to it
+tabs = st.tabs(TAB_NAMES, key="cfg_tab", on_change="rerun")
+
+with st.spinner("Generating and screening every hydrogen couple..."):
+    results = screen(tkey(t))
+names = tuple(r.cell.name for r in results if r.score > 0)[:top_n]
+extra = tuple(st.session_state.get("sized_molecules", []))
+with st.spinner(f"Sizing {len(names) + len(extra)} systems at every pressure..."):
+    designs = size(tkey(t), names, extra)
+df = design_rows(designs).sort_values("LCOS USD/kWh") if designs else pd.DataFrame()
+
+
+# ------------------------------------------------------------------ pinned candidate
+
+SWEEPS = {   # setting -> (label, values around the current one)
+    "p_max": ("Highest hydrogen pressure, bar", lambda v: [10, 20, 30, 45, 60, 100, 150, 200]),
+    "power": ("Power, kW", lambda v: [v * f for f in (0.25, 0.5, 1, 2, 4)]),
+    "hours": ("Delivers full power for, hours", lambda v: [v * f for f in (0.25, 0.5, 1, 2, 4, 8)]),
+    "rte": ("Round-trip efficiency it must keep", lambda v: [0.55, 0.65, 0.75, 0.85, 0.9]),
+    "life": ("Lifetime, years", lambda v: [5, 10, 15, 20, 30]),
+    "elec": ("Charging electricity, USD/kWh", lambda v: [0.02, 0.05, 0.1, 0.2]),
+    "scale": ("Built as", lambda v: list(stackcost.SCALES)),
+}
+
+
+def evaluate_pinned(pin: list, tt: dict) -> dict | None:
+    """Key results of the pinned candidate for these model inputs."""
+    kind, rng = pin[0], np.random.default_rng(5)
+    e = tt["design"]["power_kw"] * tt["design"]["hours"]
+    if kind == "couple":
+        cell = next((c for c in discover.table_pairs() if c.name == pin[1]), None)
+        b = design.design(cell, tt, rng).best if cell else None
+        if b is None:
+            return None
+        return {"build USD/kWh": b.capex_usd_kwh, "lifetime cost USD/kWh": b.lcos_usd_kwh,
+                "Wh/kg": e * 1000 / b.mass_kg, "Wh/L": e * 1000 / b.volume_l, "efficiency": b.rte,
+                "pressure bar": b.p_max_bar}
+    store = ai_search.load_store()
+    if kind == "molecule":
+        r = store.get(pin[1]) or M.evaluate(pin[1])
+        cfgs = options.configurations(M.as_cell(r), tt, rng) if math.isfinite(r.e0) else []
+        c = min(cfgs, key=lambda x: x.lcos_usd_kwh) if cfgs else None
+    else:
+        n, p_ = store.get(pin[1]), store.get(pin[2])
+        c = options.pair_configuration(pairs.make_pair(n, p_, int(pin[3]), int(pin[4])), tt, rng) if n and p_ else None
+    if c is None:
+        return None
+    return {"build USD/kWh": c.capex_usd_kwh, "lifetime cost USD/kWh": c.lcos_usd_kwh,
+            "Wh/kg": c.wh_kg, "Wh/L": c.wh_l, "efficiency": c.rte}
+
+
+@st.cache_data(show_spinner=False)
+def pinned_now(pin_json: str, targets_repr: str):
+    return evaluate_pinned(json.loads(pin_json), json.loads(targets_repr))
+
+
+@st.cache_data(show_spinner=False)
+def pinned_sweep(pin_json: str, settings_json: str, key: str, version: int = MODEL_VERSION):
+    pin, s = json.loads(pin_json), json.loads(settings_json)
+    rows = []
+    for v in sorted(set(SWEEPS[key][1](s[key])) | {s[key]}, key=str if key == "scale" else float):
+        if key == "p_max" and v <= s["p_min"]:
+            continue
+        res = evaluate_pinned(pin, make_targets({**s, key: v}))
+        if res:
+            rows.append({"value": stackcost.SCALES[v] if key == "scale" else v, "now": v == s[key], **res})
+    return pd.DataFrame(rows)
+
+
+def short_label(pin: list) -> str:
+    if pin[0] == "couple":
+        return pin[1]
+    if pin[0] == "molecule":
+        return pin[1] if len(pin[1]) <= 28 else pin[1][:26] + "…"
+    cut = lambda x: x if len(x) <= 16 else x[:14] + "…"
+    return f"{cut(pin[1])} | {cut(pin[2])}"
+
+
+def show_details(pin: list, kp: str):
+    if pin[0] == "couple":
+        d_ = size(tkey(t), (pin[1],), ())
+        if d_ and d_[0].best:
+            render_couple(d_[0], kp)
+    elif pin[0] == "molecule":
+        render_molecule(pin[1], kp)
+    else:
+        store_ = ai_search.load_store()
+        n_, p_ = store_.get(pin[1]), store_.get(pin[2])
+        if n_ and p_:
+            render_pair(pairs.make_pair(n_, p_, int(pin[3]), int(pin[4])), kp)
+        else:
+            st.info("Its molecules are no longer in the library.")
+
+
+def watch_tab():
+    wl = [x for x in (SS.get("watchlist") or []) if x]
+    if not wl:
+        st.info("No interesting candidates yet. Open any candidate, molecule or pair (click it in a table or "
+                "chart) and press '⭐ Add to interesting candidates'. They are then compared here and "
+                "recalculated every time you change a setting on the left.")
+        return
+    st.caption(f"Recalculated with your settings: {power:g} kW for {hours:g} h ({E_KWH:,.0f} kWh), up to "
+               f"{p_max} bar, efficiency target {rte:.2f}, {stackcost.SCALES[SS['cfg_scale']]}.")
+    fmt = {"build USD/kWh": "{:,.0f}", "lifetime cost USD/kWh": "{:,.3f}", "Wh/kg": "{:,.1f}",
+           "Wh/L": "{:,.1f}", "efficiency": "{:.2f}", "pressure bar": "{:g}"}
+    rows = []
+    with st.spinner(f"Recalculating {len(wl)} candidates..."):
+        for pin in wl:
+            now = pinned_now(json.dumps(pin), tkey(t))
+            row = {"candidate": short_label(pin), "kind": {"couple": "table couple", "molecule": "molecule vs H2",
+                                                         "pair": "two molecules"}[pin[0]]}
+            row.update({k: fmt[k].format(v) for k, v in now.items()} if now else {"build USD/kWh": "cannot be built"})
+            rows.append(row)
+    st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+    st.caption(f"Li-ion pack for comparison: about {LI['usd_kwh_stationary']:.0f} USD/kWh, {LI['wh_kg']:.0f} Wh/kg, "
+               f"{LI['wh_l']:.0f} Wh/L.")
+
+    keys = list(SWEEPS)
+    default("pin_sweep", "p_max")
+    key = st.selectbox("How one setting changes them", keys, format_func=lambda k: SWEEPS[k][0], key="pin_sweep")
+    if key == "p_max" and any(p[0] == "pair" for p in wl):
+        st.caption("Two-molecule batteries hold no gas, so pressure does not change them (flat lines).")
+    metrics_ = ["build USD/kWh", "lifetime cost USD/kWh", "Wh/kg", "efficiency"]
+    fig = make_subplots(rows=1, cols=4, subplot_titles=metrics_)
+    sj = json.dumps(SETTINGS_NOW, sort_keys=True)
+    palette = px.colors.qualitative.Plotly
+    with st.spinner(f"Recalculating at several values of '{SWEEPS[key][0]}' (first time only)..."):
+        for j, pin in enumerate(wl):
+            sw = pinned_sweep(json.dumps(pin), sj, key)
+            if sw.empty:
+                continue
+            for i_, m_ in enumerate(metrics_):
+                fig.add_trace(go.Scatter(x=sw["value"], y=sw[m_], mode="lines+markers", name=short_label(pin),
+                                         legendgroup=str(j), showlegend=i_ == 0,
+                                         line=dict(color=palette[j % len(palette)]),
+                                         marker=dict(size=[13 if x else 6 for x in sw["now"]],
+                                                     symbol=["star" if x else "circle" for x in sw["now"]])),
+                              row=1, col=i_ + 1)
+    if key in ("power", "hours", "p_max"):
+        fig.update_xaxes(type="log")
+    fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10),
+                      title=f"x axis: {SWEEPS[key][0]} (star = your current setting)",
+                      legend=dict(orientation="h", y=-0.2))
+    st.plotly_chart(fig, width="stretch", key="watch_sweep_chart")
+
+    c1, c2, c3 = st.columns([4, 1, 1])
+    pick = c1.selectbox("Details of", range(len(wl)), format_func=lambda i: short_label(wl[i]), key="watch_pick")
+    if c2.button("Remove", key="watch_remove"):
+        SS["watchlist"] = [x for k, x in enumerate(wl) if k != pick]
+        st.rerun()
+    if c3.button("Clear all", key="watch_clear"):
+        SS["watchlist"] = []
+        st.rerun()
+    with st.expander(f"Full details of {short_label(wl[pick])}, recalculated with your settings", expanded=False):
+        show_details(wl[pick], "watch")
+
+
+
+with tabs[0]:
+    watch_tab()
+
+# ------------------------------------------------------------------ gas batteries
+
+@st.cache_resource
+def gas_job() -> dict:
+    """Background xTB computation of the generated gas molecules."""
+    return {"thread": None, "done": 0, "total": 0}
+
+
+def gas_energy_count() -> int:
+    return sum(1 for v in gases.load_energies().values() if v is not None)
+
+
+@st.cache_data(show_spinner=False)
+def gas_screen(n_energies: int):
+    cells, sp = gases.screen()
+    fit = gases.fit_atom_equivalents(gases.load_energies())
+    return cells, sp, fit
+
+
+@st.cache_data(show_spinner=False)
+def gas_sized(targets_json: str, n_energies: int, top: int, measured_only: bool, no_toxic: bool,
+              proven_only: bool):
+    tt = json.loads(targets_json)
+    cells, sp, _ = gas_screen(n_energies)
+    pick = [c for c in cells if (not measured_only or not c.computed_only) and (not no_toxic or not c.toxic)
+            and (not proven_only or c.recharge == "demonstrated")]
+    ref = gases.reference_h2_o2(cells)
+    if ref is not None and ref not in pick[:top]:
+        pick = pick[:top - 1] + [ref]
+    out = []
+    for c in pick[:top]:
+        cfgs = options.gas_configurations(c, sp, tt, np.random.default_rng(3))
+        if cfgs:
+            out.append((c, max(cfgs, key=lambda x: x.wh_kg)))
+    return out, sp
+
+
+def gas_tab():
+    st.subheader("Sealed batteries that store their energy in two gases")
+    st.markdown(
+        "Every molecule with up to 4 atoms of C, N, O, F, S or Cl is generated (nothing is picked by hand). "
+        "Its energy comes from measured tables when the molecule is known, otherwise from a quantum-chemistry "
+        "calculation (GFN2-xTB). Every pair of an **oxidant gas** and a **fuel gas** that exchange hydrogen "
+        "through an acid membrane is built as a **sealed battery**: each gas in its own carbon-fibre tank, "
+        "liquids (water...) in a small tank, then sized for your power and hours like every other design. "
+        "A tank wall weighs the same per mole of gas at any pressure, so what makes a gas battery light is "
+        "**energy per mole of stored gas** (electrons x voltage).")
+    job = gas_job()
+    running = job["thread"] is not None and job["thread"].is_alive()
+    n_e = gas_energy_count()
+    todo = len([x for x in gases.to_compute() if x not in gases.load_energies()])
+    c1, c2 = st.columns([3, 1])
+    c1.caption(f"{len(gases.all_species()):,} molecules generated; {n_e:,} computed with xTB; "
+               f"{todo:,} still to compute." + (f" Computing: {job['done']}/{job['total']}..." if running else ""))
+    if c2.button("Compute missing molecules", disabled=running or todo == 0, width="stretch"):
+        import threading
+
+        def work():
+            gases.compute_energies(progress=lambda k, n: job.update(done=k, total=n))
+        job["thread"] = threading.Thread(target=work, daemon=True)
+        job["thread"].start()
+        st.rerun()
+    if n_e == 0:
+        st.info("No molecule computed yet: press 'Compute missing molecules' (a few minutes).")
+        return
+    f1, f2, f3, f4 = st.columns(4)
+    top = f1.slider("Cells to size in detail", 5, 60, 25, key="gas_top")
+    measured_only = f2.toggle("Only molecules that exist (measured)", False, key="gas_measured")
+    no_toxic = f3.toggle("Hide toxic gases", False, key="gas_notoxic")
+    proven_only = f4.toggle("Only proven rechargeable", False, key="gas_proven")
+    with st.spinner("Sizing the best gas batteries..."):
+        sized, sp = gas_sized(tkey(t), n_e, top, measured_only, no_toxic, proven_only)
+    _, _, fit = gas_screen(n_e)
+    if fit:
+        st.caption(f"Computed molecules: Gibbs energy from xTB with atom equivalents fitted to {fit.n} measured "
+                   f"molecules, leave-one-out error {fit.rmse_loo:.0f} kJ/mol (about "
+                   f"{fit.rmse_loo * 1000 / (2 * 96485):.2f} V on a 2-electron step).")
+    if not sized:
+        st.warning("No sealed two-gas cell passes these filters.")
+        return
+    best = max(sized, key=lambda x: x[1].wh_kg)[1]
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Lightest gas battery", f"{best.wh_kg:.0f} Wh/kg", f"{best.wh_kg - LI['wh_kg']:+.0f} vs Li-ion pack {LI['wh_kg']:.0f}")
+    k2.metric("Its volume", f"{best.wh_l:.0f} Wh/L", f"{best.wh_l - LI['wh_l']:+.0f} vs Li-ion pack {LI['wh_l']:.0f}")
+    v_, d_, h_ = explain.cost_range(best.capex_usd_kwh, best.capex_band, LI["usd_kwh_stationary"])
+    k3.metric("Its build cost", v_, d_, delta_color="inverse", help=h_)
+    rows = []
+    for c, cf in sized:
+        rows.append({
+            "reaction (discharge)": c.name,
+            "voltage V": f"{c.voltage:.2f} ± {c.band_v:.2f}",
+            "Wh per mol of gas": round(c.wh_per_mol_gas, 1),
+            "Wh/kg (system)": round(cf.wh_kg),
+            "Wh/L (system)": round(cf.wh_l),
+            "build USD/kWh": round(cf.capex_usd_kwh),
+            "build p10-p90 (reaction speed)": band_text(cf.capex_band),
+            "efficiency": round(cf.rte, 2),
+            "recharge proven?": c.recharge,
+            "beats Li-ion on": ", ".join(k for k, ok in (("weight", cf.wh_kg > LI["wh_kg"]), ("volume", cf.wh_l > LI["wh_l"]),
+                                                          ("cost", cf.capex_usd_kwh < LI["usd_kwh_stationary"])) if ok) or "-",
+            "toxic": ", ".join(c.toxic) or "-",
+            "computed only (may not exist)": ", ".join(sp[s].formula for s in c.computed_only) or "-",
+            "tanks": cf.store.label,
+        })
+    df_ = pd.DataFrame(rows).sort_values("Wh/kg (system)", ascending=False)
+    st.dataframe(df_, hide_index=True, width="stretch")
+    st.download_button("Download table (CSV)", df_.to_csv(index=False), "gas_batteries.csv")
+    names = [c.name for c, _ in sized]
+    pick = st.selectbox("Details of", range(len(sized)), format_func=lambda i: names[i], key="gas_pick")
+    c, cf = sized[pick]
+    st.markdown(f"**{c.name}** — {c.n_e} electrons per reaction, {c.voltage:.2f} V (± {c.band_v:.2f} V)")
+    for (kind, why), side in zip(c.evidence, ("positive (oxidant) side", "negative (fuel) side")):
+        st.markdown(f"- Recharge, {side}: **{kind}** — {why}")
+    for s in sorted({s for s in c.stoich if s in sp and s != "O"}):
+        g = sp[s]
+        st.markdown(f"- {g.name} `{s}`: boils at {g.tb_k - 273.15:.0f} C ({g.tb_source}), "
+                    f"{'gas' if g.gas else 'liquid'} at 25 C; energy: {g.source}"
+                    + ("; " + "; ".join(g.notes) if g.notes else ""))
+    li_metrics(cf, "gas")
+    show_cost(cf.cost_parts, {"i_a_cm2": cf.i_a_cm2, "area_m2": cf.area_m2, "v_dis": cf.v_dis}, "gas")
+    st.write(f"Efficiency {cf.rte:.2f} (p10-p90 {cf.rte_band[0]:.2f}-{cf.rte_band[2]:.2f}); mass {cf.mass_kg:,.0f} kg, "
+             f"volume {cf.volume_l:,.0f} L; hydrogen burst energy {cf.store.burst_tnt_kg:.2f} kg TNT.")
+    st.caption("; ".join(cf.notes))
+
+
+with tabs[1]:
+    gas_tab()
+
+# ------------------------------------------------------------------ tab 1
+
+with tabs[2]:
+    st.subheader(f"{len(results)} couples screened; {len(df)} sized for {power:g} kW x {hours:g} h")
+    if not df.empty:
+        st.markdown("#### Did we find something better than today's lithium-ion? (best sealed hydrogen design per figure)")
+        c1, c2, c3, c4 = st.columns(4)
+        bk, bl = df["Wh/kg (system)"].max(), df["Wh/L (system)"].max()
+        bc, bt = df["build USD/kWh"].min(), df["fastest charge h"].min() * 60 * 0.7
+        c1.metric("Energy per kg", f"{bk:.0f} Wh/kg", f"{bk - LI['wh_kg']:+.0f} vs Li-ion pack {LI['wh_kg']:.0f}")
+        c2.metric("Energy per litre", f"{bl:.0f} Wh/L", f"{bl - LI['wh_l']:+.0f} vs Li-ion pack {LI['wh_l']:.0f}")
+        c3.metric("Build cost", f"${bc:.0f}/kWh", f"{bc - LI['usd_kwh_stationary']:+.0f} vs Li-ion ${LI['usd_kwh_stationary']:.0f}",
+                  delta_color="inverse")
+        c4.metric("Charge 10-80 %", f"{bt:.0f} min", f"{bt - LI['charge_min_10_80']:+.0f} vs Li-ion {LI['charge_min_10_80']:.0f} min",
+                  delta_color="inverse")
+        st.caption("Green = better than lithium-ion, red = worse. Each figure is the best single design for that "
+                   "figure, so no one design need reach all four. Lifetime cannot be predicted and is not compared.")
+        wins = df[[c for c in df.columns if c.startswith("vs Li-ion")]].eq("better").sum(axis=1)
+        df.insert(0, "beats Li-ion on", wins)
+        st.caption("Click a row (or any point in the charts) to open everything about that candidate.")
+        SS["rows_best_tbl"] = df[["couple"]].values.tolist()
+        ev = st.dataframe(df, width="stretch", hide_index=True, on_select="rerun",
+                          selection_mode="single-row", key=ck("best_tbl"))
+        take_row(ev, "best_tbl", "couple")
+        st.download_button("Download table (CSV)", df.to_csv(index=False), "h2_candidates.csv")
+
+# ------------------------------------------------------------------ tab 2
+
+with tabs[3]:
+    pts = []
+    for d in designs:
+        for p in d.points:
+            pts.append({"couple": d.cell.name, "p_max bar": p.p_max_bar,
+                        "Wh/kg": E_KWH * 1000 / p.mass_kg, "Wh/L": E_KWH * 1000 / p.volume_l,
+                        "build USD/kWh": p.capex_usd_kwh, "LCOS": p.lcos_usd_kwh,
+                        "burst kg TNT": p.safety.burst_tnt_kg, "RTE": p.rte})
+    pdf = pd.DataFrame(pts)
+    if not pdf.empty:
+        front = design.pareto([(-r["Wh/kg"], r["build USD/kWh"], r["burst kg TNT"]) for _, r in pdf.iterrows()])
+        pdf["Pareto best"] = [i in front for i in range(len(pdf))]
+        f1 = px.scatter(pdf, x="Wh/kg", y="build USD/kWh", color="burst kg TNT", symbol="Pareto best", custom_data=["couple"],
+                        hover_data=["couple", "p_max bar", "RTE", "LCOS"],
+                        title="Energy per kg vs build cost (each point: one couple at one pressure)")
+        for b in REF["battery"]:
+            if b["level"] == "pack" and "wh_kg" in b:
+                f1.add_vline(x=b["wh_kg"][1], line_dash="dot", annotation_text=b["name"].split(",")[0])
+        f1.add_hline(y=LI["usd_kwh_stationary"], line_dash="dash", annotation_text="Li-ion stationary pack $70/kWh")
+        f1.add_hline(y=LI["usd_kwh_bev"], line_dash="dash", annotation_text="Li-ion car pack $99/kWh")
+        ev1 = st.plotly_chart(f1, width="stretch", on_select="rerun", selection_mode="points", key=ck("f1"))
+        take(ev1, "f1", "couple")
+        pk3 = st.selectbox("Show details of…", [""] + sorted(pdf["couple"].unique().tolist()), key="couple_pick",
+                           format_func=lambda x: "choose a couple" if not x else x)
+        if pk3 and st.button("Open", key="couple_pick_open"):
+            SS["pending_dialog"] = ("couple", [pk3])
+        f2 = px.scatter(pdf, x="burst kg TNT", y="LCOS", color="p_max bar", hover_data=["couple"], custom_data=["couple"],
+                        title="Safety (stored burst energy) vs levelised cost of storage")
+        ev2 = st.plotly_chart(f2, width="stretch", on_select="rerun", selection_mode="points", key=ck("f2"))
+        take(ev2, "f2", "couple")
+        f3 = px.line(pdf, x="p_max bar", y="Wh/kg", color="couple", markers=True, custom_data=["couple"],
+                     title="Energy per kg vs maximum hydrogen pressure")
+        f3.add_hline(y=LI["wh_kg"], line_dash="dot", annotation_text="Li-ion pack")
+        ev3 = st.plotly_chart(f3, width="stretch", on_select="rerun", selection_mode="points", key=ck("f3"))
+        take(ev3, "f3", "couple")
+
+# ------------------------------------------------------------------ tab 3
+
+with tabs[4]:
+    if designs:
+        names = [d.cell.name for d in designs if d.best]
+        last = st.session_state.get("selected_couple")
+        pick = st.selectbox("Couple", names, index=names.index(last) if last in names else 0)
+        render_couple(next(x for x in designs if x.cell.name == pick), "tab")
+
+# ------------------------------------------------------------------ tab 4: options
+
+@st.cache_data(show_spinner=False)
+def option_table(targets_json: str, name: str | None, smiles: tuple[str, ...]):
+    tt = json.loads(targets_json)
+    cells = discover.table_pairs()
+    rng = np.random.default_rng(5)
+    cfgs = []
+    if name:
+        by = {c.name: c for c in cells}
+        if name in by:
+            cfgs += [(name, c) for c in options.configurations(by[name], tt, rng)]
+        else:
+            for s in smiles:
+                r = M.evaluate(s)
+                if r.smiles == name or s == name:
+                    cfgs += [(name, c) for c in options.configurations(M.as_cell(r), tt, rng)]
+    cfgs += [("H2-air fuel cell", c) for c in options.refuel_configurations(cells, tt, rng)]
+    return cfgs
+
+
+with tabs[5]:
+    st.write("Every way to store the hydrogen and to recharge, sized for the same job "
+             f"({power:g} kW for {hours:g} h) and compared with lithium-ion car packs.")
+    st.markdown("- **electric**: sealed, recharged with electricity only; the gas never leaves.\n"
+                "- **h2-refuel**: fuel cell on air, tank refilled with hydrogen made off board "
+                "(efficiency counts electrolysis, compression and the fuel cell).\n"
+                "- **swap**: hydrogen refill plus exchange of the charged liquid electrolyte.")
+    choices = [d.cell.name for d in designs if d.best]
+    sel = st.selectbox("Couple", choices, key="opt_couple") if choices else None
+    with st.spinner("Sizing every storage option..."):
+        cfgs = option_table(tkey(t), sel, extra)
+    if cfgs:
+        od = pd.DataFrame([{"couple": n, "option": c.name, "pressure": c.store.pressure,
+                            "Wh/kg": round(c.wh_kg, 1), "Wh/L": round(c.wh_l, 1),
+                            "build USD/kWh": round(c.capex_usd_kwh),
+                            "build p10-p90 (reaction speed)": band_text(c.capex_band),
+                            "LCOS USD/kWh": round(c.lcos_usd_kwh, 3),
+                            "efficiency p50": round(c.rte, 2),
+                            "efficiency p10-p90": f"{c.rte_band[0]:.2f}-{c.rte_band[2]:.2f}",
+                            "recharge time, min": round(c.recharge_h * 60),
+                            "burst kg TNT": round(c.store.burst_tnt_kg, 3), "leak g/s": round(c.store.leak_g_s, 3),
+                            "heat to move, kW": round(c.store.heat_kw, 1),
+                            "H2 loss %/yr": round(c.store.h2_loss_per_year * 100, 4),
+                            "notes": "; ".join(c.store.notes + c.notes)} for n, c in cfgs])
+        st.dataframe(od, hide_index=True, width="stretch")
+        li = pd.DataFrame([{"option": "Li-ion car pack (best pack values)", "Wh/kg": LI["wh_kg"], "Wh/L": LI["wh_l"],
+                            "build USD/kWh": LI["usd_kwh_bev"], "recharge time, min": LI["charge_min_10_80"] / 0.7}])
+        both = pd.concat([od[["option", "Wh/kg", "Wh/L", "build USD/kWh", "recharge time, min"]], li])
+        for col in ["Wh/kg", "Wh/L", "build USD/kWh", "recharge time, min"]:
+            figc = px.bar(both, x="option", y=col, title=col,
+                          color=both["option"].str.startswith("Li-ion").map({True: "Li-ion", False: "hydrogen"}))
+            figc.update_layout(xaxis_title="", showlegend=False, height=380)
+            st.plotly_chart(figc, width="stretch")
+        st.caption("Li-ion recharge time is the 10-80 % fast-charge time scaled to a full charge. "
+                   "Refuel options do not include the off-board electrolyser and station in the build cost.")
+
+# ------------------------------------------------------------------ tab 5
+
+with tabs[6]:
+    st.write("A genetic algorithm writes new molecules (SELFIES mutations and crossovers); a machine-learning "
+             "model predicts which are worth computing; GFN2-xTB quantum chemistry computes their voltage with "
+             "hydrogen; the model learns from every result. Molecules not in PubChem have never been reported.")
+    g1, g2, g3, g4 = st.columns(4)
+    default("mol_gens", 5)
+    gens = g1.number_input("Generations", 1, 200, key="mol_gens", help='How many rounds of evolution to run. In each round the AI writes several hundred new molecules by mutating and crossing the best ones found so far, predicts which are promising, and computes the best few with quantum chemistry. More rounds = more molecules explored and usually better results; time grows in proportion.')
+    default("mol_batch", 8)
+    batch = g2.number_input("Molecules computed per generation", 2, 64, key="mol_batch", help='How many molecules get a full quantum-chemistry calculation in each round (about 5-30 s each). Larger = more thorough per round but slower.')
+    default("mol_heavy", 24)
+    heavy = g3.number_input("Largest molecule (heavy atoms)", 8, 60, key="mol_heavy", help='Largest molecule allowed, counted in non-hydrogen atoms (C, N, O, S, ...). Small molecules dissolve better and are lighter per kWh; larger ones can carry more hydrogen but compute slower and are harder to make.')
+    default("mol_kappa", 1.0)
+    kappa = g4.slider("Exploration (0 = exploit, 3 = explore)", 0.0, 3.0, step=0.1, key="mol_kappa", help='Balance between exploiting and exploring. 0 = only compute molecules the AI is confident are good (fast improvement, may get stuck). Higher = also compute molecules it is unsure about, to discover new kinds of chemistry (slower, broader). 1-1.5 is a good middle.')
+    search_panel("positive", dict(generations=int(gens), batch=int(batch), max_heavy=int(heavy), kappa=kappa), "mol")
+    store = {r.smiles: r for r in view_pool("mol")}
+    if store:
+        mol = pd.DataFrame([{"molecule": r.smiles, "reduced form": r.reduced, "E V vs SHE": round(r.e0, 3),
+                             "solubility M (ESOL)": round(r.solubility_mol_l, 2), "Wh/L electrolyte": round(r.wh_l, 1),
+                             "Wh/kg molecule": round(r.wh_kg), "synthesis difficulty (1-10)": round(r.sa, 1),
+                             "score": 0.0 if pairs._unstable(r.smiles) else round(r.objective, 1),
+                             "H2 per molecule": r.best_k,
+                             "step voltages V": ", ".join(f"{x:.2f}" for x in (r.steps or [r.e0])),
+                             "must cost below USD/kg": round(pairs.CHEMICAL_SHARE * LI["usd_kwh_stationary"]
+                                                             / pairs.kg_per_kwh(r.mw, sum((r.steps or [r.e0])[:r.best_k]) / r.best_k, 2 * r.best_k), 1)
+                                                       if r.e0 > 0.05 else None,
+                             "estimated price USD/kg": round(synthesis.estimate(r.smiles, t["synthesis"]).usd_kg, 1),
+                             "new (not in PubChem)": {True: "no", False: "yes", None: "?"}[r.in_pubchem],
+                             "notes": "; ".join(r.notes + (["unstable: " + ", ".join(M.instability(r.smiles))]
+                                                           if pairs._unstable(r.smiles) else []))}
+                            for r in store.values() if math.isfinite(r.e0)])
+        mol = mol.sort_values("score", ascending=False)
+        mol["status"] = np.where(mol["score"] > 0, "usable",
+                                 np.where(mol["E V vs SHE"] > 1.629, "rejected: voltage would split the water",
+                                          "rejected: unstable, too low or insoluble"))
+        mol["never reported"] = mol["new (not in PubChem)"]
+        sc = px.scatter(mol, x="E V vs SHE", y="Wh/L electrolyte", color="status", symbol="never reported", custom_data=["molecule"],
+                        size=mol["solubility M (ESOL)"].clip(0.05, 4), hover_data=["molecule", "notes"],
+                        title="Every molecule computed: voltage vs energy per litre of electrolyte")
+        sc.add_hline(y=LI["wh_l"], line_dash="dash", line_color="red",
+                     annotation_text=f"Li-ion car pack {LI['wh_l']:.0f} Wh/L")
+        evm = st.plotly_chart(sc, width="stretch", on_select="rerun", selection_mode="points", key=ck("molsc"))
+        take(evm, "molsc", "molecule")
+        pk_ = st.selectbox("Show details of…", [""] + mol["molecule"].tolist(), key="mol_pick",
+                           format_func=lambda x: "choose a molecule" if not x else x,
+                           help="Works at any time, also while a search refreshes the page.")
+        if pk_ and st.button("Open", key="mol_pick_open"):
+            SS["pending_dialog"] = ("molecule", [pk_])
+        st.caption("Wh/L of electrolyte is an upper bound: the full battery (stack, hydrogen storage, case) holds less. "
+                   "Use 'Size selected' below for a like-for-like comparison with lithium-ion.")
+        SS["rows_mol_tbl"] = mol[["molecule"]].values.tolist()
+        evt = st.dataframe(mol, hide_index=True, width="stretch", on_select="rerun",
+                           selection_mode="single-row", key=ck("mol_tbl"))
+        take_row(evt, "mol_tbl", "molecule")
+        best = mol.head(12)["molecule"].tolist()
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import Draw
+            st.image(Draw.MolsToGridImage([Chem.MolFromSmiles(s) for s in best], molsPerRow=6, subImgSize=(220, 180),
+                                          legends=[f"{s[:28]}" for s in best]), caption="Top molecules")
+        except Exception:
+            pass
+        chosen = st.multiselect("Size these molecules as hydrogen batteries (they then appear in every tab)", best)
+        if st.button("Size selected"):
+            st.session_state["sized_molecules"] = chosen
+            st.rerun()
+
+# ------------------------------------------------------------------ tab 6: two molecules
+
+with tabs[7]:
+    st.write("Hydrogen moves between two molecules as protons and electrons and is never a gas: "
+             "no pressure, no tank, no platinum, a water-based liquid that cannot burn. "
+             "Negative: N-H2 -> N + 2H+ + 2e-; positive: P + 2H+ + 2e- -> P-H2; voltage = E(P) - E(N), "
+             f"kept inside the water window ({-pairs.HER_MARGIN + pairs.HEADROOM:.2f} to "
+             f"{1.229 + pairs.OER_MARGIN - pairs.HEADROOM:.2f} V vs SHE).")
+    with st.expander("How a two-tank battery works (animation)", expanded=True):
+        anim_mode = st.radio("Show", ["discharge", "charge"], horizontal=True, key="anim_mode",
+                             format_func=lambda m: {"discharge": "Discharging (gives power)",
+                                                    "charge": "Charging (stores power)"}[m])
+        st.iframe(animation.two_tank_html(anim_mode, height=520), height=520)
+    q1, q2, q3, q4 = st.columns(4)
+    default("pair_gens", 5)
+    pg = q1.number_input("Generations", 1, 200, key="pair_gens", help='How many rounds of evolution to run. In each round the AI writes several hundred new molecules by mutating and crossing the best ones found so far, predicts which are promising, and computes the best few with quantum chemistry. More rounds = more molecules explored and usually better results; time grows in proportion.')
+    default("pair_batch", 8)
+    pb = q2.number_input("Molecules computed per generation", 2, 64, key="pair_batch", help='How many molecules get a full quantum-chemistry calculation in each round (about 5-30 s each). Larger = more thorough per round but slower.')
+    default("pair_heavy", 28)
+    ph = q3.number_input("Largest molecule (heavy atoms)", 8, 60, key="pair_heavy", help='Largest molecule allowed, counted in non-hydrogen atoms (C, N, O, S, ...). Small molecules dissolve better and are lighter per kWh; larger ones can carry more hydrogen but compute slower and are harder to make.')
+    default("pair_kappa", 1.5)
+    pk = q4.slider("Exploration (0 = exploit, 3 = explore)", 0.0, 3.0, step=0.1, key="pair_kappa", help='Balance between exploiting and exploring. 0 = only compute molecules the AI is confident are good (fast improvement, may get stuck). Higher = also compute molecules it is unsure about, to discover new kinds of chemistry (slower, broader). 1-1.5 is a good middle.')
+    search_panel("pair", dict(generations=int(pg), batch=int(pb), max_heavy=int(ph), kappa=pk), "pair")
+    pool = view_pool("pair")
+    ps = pairs.best_pairs(pool, 40, max_per_molecule=2)
+    if ps:
+        pt = pd.DataFrame([{"negative molecule": p.neg.smiles, "E neg V": round(p.neg.e0, 2),
+                            "positive molecule": p.pos.smiles, "E pos V": round(p.pos.e0, 2),
+                            "cell V": round(p.voltage, 2), "e- per neg / pos": f"{2 * p.kn} / {2 * p.kp}",
+                            "Wh/L (both liquids)": round(p.wh_l, 1),
+                            "Wh/kg (both liquids)": round(p.wh_kg, 1),
+                            "kg chemicals per kWh": round(pairs.kg_per_kwh(p.neg.mw, p.voltage, 2 * p.kn)
+                                                          + pairs.kg_per_kwh(p.pos.mw, p.voltage, 2 * p.kp), 2),
+                            "must cost below USD/kg": round(pairs.price_ceiling_usd_kg(p, LI["usd_kwh_stationary"]), 1),
+                            "estimated USD/kg (neg / pos)": f"{synthesis.estimate(p.neg.smiles, t['synthesis']).usd_kg:,.0f} / "
+                                                            f"{synthesis.estimate(p.pos.smiles, t['synthesis']).usd_kg:,.0f}",
+                            "never reported": ", ".join(x for x, r in (("neg", p.neg), ("pos", p.pos)) if r.in_pubchem is False) or "-",
+                            "notes": "; ".join(p.notes + p.neg.notes + p.pos.notes)} for p in ps])
+        fp = px.scatter(pt, x="cell V", y="Wh/L (both liquids)", size="Wh/kg (both liquids)",
+                        custom_data=["negative molecule", "positive molecule"],
+                        hover_data=["negative molecule", "positive molecule", "must cost below USD/kg"],
+                        title="Every pair: voltage vs energy per litre of the two liquids")
+        fp.add_hline(y=LI["wh_l"], line_dash="dash", line_color="red", annotation_text=f"Li-ion car pack {LI['wh_l']:.0f} Wh/L")
+        evp = st.plotly_chart(fp, width="stretch", on_select="rerun", selection_mode="points", key=ck("pairsc"))
+        take(evp, "pairsc", "pair")
+        labels = [f"{a} | {b}" for a, b in zip(pt["negative molecule"], pt["positive molecule"])]
+        pk2 = st.selectbox("Show details of…", [""] + labels, key="pair_pick",
+                           format_func=lambda x: "choose a pair (negative | positive)" if not x else x,
+                           help="Works at any time, also while a search refreshes the page.")
+        if pk2 and st.button("Open", key="pair_pick_open"):
+            SS["pending_dialog"] = ("pair", pk2.split(" | "))
+        st.caption(f"'must cost below' = the price per kg at which both molecules together stay under "
+                   f"{pairs.CHEMICAL_SHARE:.0%} of a stationary Li-ion pack (${LI['usd_kwh_stationary']:.0f}/kWh). "
+                   "Liquid-level figures are upper bounds; size a pair for the full battery.")
+        SS["rows_pair_tbl"] = pt[["negative molecule", "positive molecule"]].values.tolist()
+        evq = st.dataframe(pt, hide_index=True, width="stretch", on_select="rerun",
+                           selection_mode="single-row", key=ck("pair_tbl"))
+        take_row(evq, "pair_tbl", "pair")
+        pick = st.multiselect("Size these pairs as full batteries", list(range(min(10, len(ps)))),
+                              format_func=lambda i: f"{ps[i].neg.smiles} | {ps[i].pos.smiles}")
+        if pick:
+            rng = np.random.default_rng(7)
+            rows = []
+            for i in pick:
+                c = options.pair_configuration(ps[i], t, rng)
+                if c is None:
+                    rows.append({"pair": f"{ps[i].neg.smiles} | {ps[i].pos.smiles}", "result": "cannot be charged inside the water window"})
+                    continue
+                cmpd = reference.compare(c, E_KWH, REF) if hasattr(c, "min_charge_h") else {}
+                rows.append({"pair": f"{ps[i].neg.smiles} | {ps[i].pos.smiles}", "Wh/kg": round(c.wh_kg, 1),
+                             "Wh/L": round(c.wh_l, 1), "build USD/kWh (chemicals at element floor)": round(c.capex_usd_kwh),
+                             "LCOS": round(c.lcos_usd_kwh, 3), "efficiency": f"{c.rte:.2f} ({c.rte_band[0]:.2f}-{c.rte_band[2]:.2f})",
+                             "recharge h": round(c.recharge_h, 2), "burst kg TNT": 0.0,
+                             "vs Li-ion Wh/kg": "better" if c.wh_kg > LI["wh_kg"] else "worse",
+                             "vs Li-ion Wh/L": "better" if c.wh_l > LI["wh_l"] else "worse"})
+            st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+    else:
+        st.info("No usable pair yet: run pair discovery.")
+
+# ------------------------------------------------------------------ tab 7
+
+with tabs[8]:
+    st.subheader("Lithium-ion batteries in current cars (liquid electrolyte, not solid-state)")
+    st.dataframe(pd.DataFrame([{"battery": b["name"], "level": b["level"],
+                                "Wh/kg": "-".join(f"{x:g}" for x in b.get("wh_kg", [])),
+                                "Wh/L": "-".join(f"{x:g}" for x in b.get("wh_l", [])),
+                                "cycles": "-".join(f"{x:g}" for x in b.get("cycles", [])),
+                                "fast charge 10-80 % min": "-".join(f"{x:g}" for x in b.get("charge_minutes_10_80", [])),
+                                "quality": b["quality"], "sources": " | ".join(b["sources"])} for b in REF["battery"]]),
+                 hide_index=True, width="stretch")
+    pr = REF["prices"]
+    st.write(f"Pack prices, BloombergNEF 2025 survey: average ${pr['pack_avg_usd_kwh']:.0f}/kWh, LFP ${pr['pack_lfp_usd_kwh']:.0f}, "
+             f"NMC ${pr['pack_nmc_usd_kwh']:.0f}, car packs ${pr['pack_bev_usd_kwh']:.0f}, stationary ${pr['pack_stationary_usd_kwh']:.0f} "
+             f"({pr['source']})")
+    st.subheader("Model checks against published hydrogen cells")
+    st.write("- Mn–H2 (Chen et al., Nature Energy 2018): ~1.3 V measured; model OCV 1.22 V.\n"
+             "- H2–Br2 (Cho et al., J. Electrochem. Soc. 2012): 1.4 W/cm² peak measured; model p90 0.72 W/cm² — the "
+             "generic reaction-speed range is too pessimistic for fast halogen couples.\n"
+             "- Molecules: xTB voltage offset set by p-benzoquinone (0.699 V); 1,4-naphthoquinone computed 0.33 V vs ~0.47 V, "
+             "anthraquinone 0.01 V vs ~0.13 V (band ±0.3 V).")
+
+
+open_pending_dialog()
+SS["_full_run"] = False
+runs.save_settings({k: SS[k] for k in SETTING_KEYS if k in SS})

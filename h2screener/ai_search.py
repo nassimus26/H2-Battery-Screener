@@ -38,6 +38,22 @@ from . import synthesis
 
 ROOT = Path(__file__).resolve().parent.parent
 STORE = ROOT / "cache" / "molecule_search.csv"
+EPOCH = ROOT / "cache" / "reset_epoch"       # bumped by every reset: a search started before it may not save
+
+
+def epoch() -> int:
+    try:
+        return int(EPOCH.read_text().strip() or 0)
+    except Exception:
+        return 0
+
+
+def bump_epoch() -> int:
+    """Call on every reset: searches still running from before will no longer write their results."""
+    EPOCH.parent.mkdir(exist_ok=True)
+    n = epoch() + 1
+    EPOCH.write_text(str(n))
+    return n
 
 # Starting points: small redox-active cores. The search mutates far away from them.
 NEG_SEEDS = [                       # low-potential cores for the negative side
@@ -235,6 +251,11 @@ class Control:
         self.mol_times: list[float] = []
         self.started = 0.0
         self.evaluated: list[str] = []      # molecules computed by this run
+        # how much chemical space this run has looked at
+        self.written = 0                    # children written by mutation / crossover (all tries)
+        self.passed = 0                     # new, valid, stable children the model scored
+        self.written_gen = 0                # the same, for the current generation
+        self.passed_gen = 0
         self.on_update = None               # callable(control, store) after each generation and at the end
 
     def wait(self) -> bool:
@@ -270,6 +291,7 @@ def start_background(control: Control, **kw) -> None:
     control.generation, control.done_in_phase, control.phase_size = 0, 0, 0
     control.mol_times, control.started, control.phase = [], time.time(), "starting molecules"
     control.evaluated = []
+    control.written = control.passed = control.written_gen = control.passed_gen = 0
     control.thread = threading.Thread(target=run, daemon=True, name="h2-search")
     control.thread.start()
 
@@ -282,6 +304,11 @@ def search(generations: int = 10, batch: int = 8, children: int = 300, max_heavy
     judged by the best two-molecule cell they make with the pool so far."""
     from . import pairs as P
     rng = random.Random(seed)
+    e0 = epoch()
+
+    def save_store(st_):                          # never write over a reset made after this search started
+        if epoch() == e0:
+            globals()["save_store"](st_)
     store = load_store()
     seeds = [M.REFERENCE_SMILES] + SEEDS + MULTI_SEEDS + (NEG_SEEDS if mode == "pair" else [])
     todo = [c for c in (M.canonical(s) for s in seeds) if c and c not in store]
@@ -327,6 +354,10 @@ def search(generations: int = 10, batch: int = 8, children: int = 300, max_heavy
             c = crossover(a, rng.choice(parents).smiles, rng) if rng.random() < 0.3 else mutate(a, rng)
             if c and c not in store and c not in pool and _ok(c, max_heavy):
                 pool.add(c)
+        if control:
+            control.written_gen, control.passed_gen = tries, len(pool)
+            control.written += tries
+            control.passed += len(pool)
         if not pool:
             break
         cand = sorted(pool)
@@ -345,10 +376,12 @@ def search(generations: int = 10, batch: int = 8, children: int = 300, max_heavy
         if control:
             control.phase, control.generation = "generation", g + 1
             control.phase_size, control.done_in_phase = len(pick), 0
+        gen_ids = []
         for s in pick:
             if control and control.wait():
                 break
             store[s] = _timed_eval(control, s, check_pubchem)
+            gen_ids.append(store[s].smiles)
         save_store(store)
         if control:
             if mode == "pair":
@@ -360,7 +393,7 @@ def search(generations: int = 10, batch: int = 8, children: int = 300, max_heavy
                 best = top.objective if top else 0.0
                 best_id = [top.smiles] if top else None
             control.history.append({"generation": len(control.history) + 1, "best": best,
-                                    "molecules": len(store), "best_id": best_id})
+                                    "molecules": len(store), "best_id": best_id, "ids": gen_ids})
             if control.on_update:
                 try:
                     control.on_update(control, store)

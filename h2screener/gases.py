@@ -6,19 +6,21 @@ Generation
   exhaustively: the space of molecules that are gases at room temperature is
   small enough to compute in full, so nothing is guessed or sampled.
 
-Thermodynamics (Gibbs energy of formation at 25 C)
-  measured   NIST-JANAF / CRC Handbook values for ~45 known small molecules
-             (some computed here from their measured enthalpy and entropy);
-             radicals (O2, NO, NO2) come only from this table
-  computed   GFN2-xTB gas-phase energy of one conformer, turned into a Gibbs
-             energy of formation with atom equivalents fitted to the measured
-             molecules (least squares); the leave-one-out error of that fit is
-             the stated uncertainty
-  liquids    a molecule boiling above 25 C uses its measured liquid value, or
-             the gas value minus a Trouton estimate of the evaporation energy
+Thermodynamics (Gibbs energy of formation at 25 C) - no measured value of any molecule is used
+  best       CCSD(T)/cc-pVTZ (small molecules) or wB97X-V/def2-TZVP DFT, on GFN2-xTB geometries
+             of several conformers, with harmonic thermal corrections (abinitio.py). Element
+             references H, O, N, F, Cl from the computed H2, O2, N2, F2, Cl2; carbon and sulfur
+             (solids, not computable as molecules) fitted on the training half of the known gases.
+  fast       GFN2-xTB energy of one conformer, with atom equivalents fitted on the training half
+             of the known gases; used until the accurate calculation of a molecule is done, and by
+             the AI search.
+  test       the other half of the known gases measures the error of each level (validation).
+  liquids    a molecule boiling above 25 C: the gas value minus a Trouton estimate of the
+             evaporation energy; water from its own computed solvation energy.
+  USE_MEASURED = True restores the old behaviour (measured tables for known molecules).
 
 Boiling point
-  measured where known, else the Joback group-contribution estimate
+  the Joback group-contribution estimate for every molecule
   (Joback & Reid, Chem. Eng. Commun. 57 (1987) 233), +/- ~25 K.
 
 Couples and cells (acid electrolyte, protons cross the membrane)
@@ -56,6 +58,7 @@ RDLogger.DisableLog("rdApp.*")
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "cache"
 GAS_ENERGIES = CACHE / "xtb_gas_energies.json"
+SEARCHED = CACHE / "gas_search.json"      # molecules proposed by the AI search (gas_search.py)
 
 MAX_HEAVY = 4
 ELEMENTS = ("C", "N", "O", "F", "S", "Cl")
@@ -65,6 +68,10 @@ EV_KJ = 96.485              # kJ/mol per eV
 G_WATER_L = -237.1          # kJ/mol, liquid water
 XTB_CUTOFF_K = 400.0        # molecules boiling above this are not computed (cannot be gases or useful products)
 MIN_VOLTAGE = 0.3
+MAX_CELLS = 400_000          # the lightest cells kept by the screen (the rest are far from useful)
+MAX_K = 8                   # molecules of one species per couple (C8 fuel -> 8 CO2)
+MAX_E = 60                  # electrons per couple (C8H18 -> 8 CO2 moves 50)
+CHARGE_MARGIN_V = 0.1       # overpotential a cell needs above its voltage to charge at all
 TANK_KG_PER_MOL_EST = 0.03  # kg of carbon-fibre wall per mole of gas (Toyota Mirai tank); only to pre-rank
 
 SRC = "NIST-JANAF / CRC Handbook, dfG at 298 K"
@@ -244,9 +251,20 @@ def _real_sulfur(smiles: str) -> bool:
     return True
 
 
+def searched_species() -> list[str]:
+    """Larger molecules proposed by the AI search (gas_search.py) whose energy was computed."""
+    try:
+        recs = json.loads(SEARCHED.read_text()).get("molecules", {})
+    except Exception:
+        return []
+    return [s for s, r in recs.items() if r.get("g_gas_kj") is not None]
+
+
 def all_species() -> list[str]:
-    """Generated molecules plus the measured ones (radicals and diatomics included)."""
-    return sorted(set(enumerate_molecules()) | {canonical(s) or s for s in MEASURED} | {"[H][H]"})
+    """Generated molecules, the measured ones (radicals and diatomics included)
+    and the larger molecules found by the AI search."""
+    return sorted(set(enumerate_molecules()) | {canonical(s) or s for s in MEASURED} | {"[H][H]"}
+                  | set(searched_species()))
 
 
 # ------------------------------------------------------------------ boiling point
@@ -318,9 +336,19 @@ def joback_tb(smiles: str) -> float:
 
 
 def boiling_point(smiles: str) -> tuple[float, str]:
-    if smiles in MEASURED:
-        return MEASURED[smiles][3], "measured"
+    """Estimated for every molecule, known or not (measured boiling points are only used to test)."""
+    if smiles == "O":
+        return 373.0, "water: liquid by its computed solvation energy (Joback is not valid for water)"
+    if smiles == "[H][H]":
+        return 20.0, "hydrogen: a gas (Joback is not valid for H2)"
     return joback_tb(smiles), "estimated (Joback)"
+
+
+def is_train(smiles: str) -> bool:
+    """Known molecules are split in two halves, by alphabetical order of SMILES: a few constants may be
+    fitted on the training half; the test half only measures the error."""
+    ks = sorted(MEASURED)
+    return smiles in ks and ks.index(smiles) % 2 == 0
 
 
 # ------------------------------------------------------------------ energies
@@ -395,36 +423,44 @@ def counts(smiles: str) -> dict[str, int]:
     return out
 
 
+@lru_cache(maxsize=100_000)
+def _counts_t(smiles: str) -> tuple:
+    return tuple(sorted(counts(smiles).items()))
+
+
+def _counts(smiles: str) -> dict[str, int]:
+    return dict(_counts_t(smiles))
+
+
 FIT_ELEMENTS = ("H", "C", "N", "O", "F", "S", "Cl")
 
 
 @dataclass
 class Fit:
     mu: dict                 # kJ/mol per atom
-    rmse_loo: float          # kJ/mol, leave-one-out
+    rmse_loo: float          # kJ/mol, RMS error on the test half of the known molecules
     n: int
 
 
 def fit_atom_equivalents(cache: dict) -> Fit | None:
     """dfG(gas) = E_xtb - sum n_el mu_el, fitted to the measured closed-shell molecules."""
-    rows, y = [], []
+    rows, y, test = [], [], []
     for s, (_, g, _, _, _) in MEASURED.items():
         e = cache.get(s)
         if s in RADICALS or e is None:
             continue
         c = counts(s)
-        rows.append([c.get(el, 0) for el in FIT_ELEMENTS])
-        y.append(e * EV_KJ - g)
+        (rows if is_train(s) else test).append([c.get(el, 0) for el in FIT_ELEMENTS])
+        if is_train(s):
+            y.append(e * EV_KJ - g)
+        else:
+            test[-1] = (test[-1], e * EV_KJ - g)
     if len(rows) < len(FIT_ELEMENTS) + 3:
         return None
     a, b = np.array(rows, float), np.array(y)
     mu, *_ = np.linalg.lstsq(a, b, rcond=None)
-    err = []
-    for k in range(len(b)):
-        keep = np.arange(len(b)) != k
-        m_k, *_ = np.linalg.lstsq(a[keep], b[keep], rcond=None)
-        err.append(a[k] @ m_k - b[k])
-    return Fit(dict(zip(FIT_ELEMENTS, mu)), float(np.sqrt(np.mean(np.square(err)))), len(b))
+    err = [np.array(x) @ mu - yy for x, yy in test]          # errors on the test half only
+    return Fit(dict(zip(FIT_ELEMENTS, mu)), float(np.sqrt(np.mean(np.square(err)))) if err else 80.0, len(b))
 
 
 def storable(smiles: str) -> bool:
@@ -469,29 +505,118 @@ class GasSpecies:
         return self.tb_k < T25
 
 
+def g_gas_xtb(smiles: str, energy_ev: float, fit: Fit) -> float:
+    """Gibbs energy of formation of the gas, kJ/mol, from an xTB energy and the atom equivalents."""
+    return energy_ev * EV_KJ - sum(n * fit.mu.get(el, 0.0) for el, n in counts(smiles).items())
+
+
+def computed_species(smiles: str, g_gas: float, band: float, searched: bool = False) -> GasSpecies:
+    """A molecule without measured data, from its (computed or predicted) gas Gibbs energy."""
+    tb, tb_src = boiling_point(smiles)
+    m = Chem.MolFromSmiles(smiles)
+    formula = formula_of(smiles)
+    g = g_gas - (TROUTON * (tb - T25) / 1000 if tb > T25 else 0)
+    notes = ["not a measured compound: may not exist or may decompose"]
+    if searched:
+        notes.append("proposed by the AI search")
+    return GasSpecies(smiles, formula, formula, rdMolDescriptors.CalcExactMolWt(Chem.AddHs(m)), tb, tb_src, g,
+                      band, f"GFN2-xTB + atom equivalents fitted on the training half (+/-{band:.0f} kJ/mol on the "
+                            f"test half)", smiles in TOXIC, notes)
+
+
+USE_MEASURED = False        # True = old behaviour: measured values replace calculations for known molecules
+
+
+def first_principles_scale(level: str) -> dict | None:
+    """Element references of one level: H, O, N, F, Cl from its own computed H2, O2, N2, F2, Cl2; carbon and
+    sulfur (solids at 25 C, not computable as molecules) fitted on the training half of the known gases.
+    Returns {'mu': {...}, 'test_rmse': kJ/mol, 'n_test': n} or None if the level is not computed yet."""
+    from . import abinitio as A
+    ref = {"H": "[H][H]", "O": "O=O", "N": "N#N", "F": "FF", "Cl": "ClCl"}
+    mu = {}
+    for el, r in ref.items():
+        x = A.free_energy(r, level, "g", compute=False)
+        if not x or "g_kj" not in x:
+            return None
+        mu[el] = x["g_kj"] / 2
+    rows, y, test = [], [], []
+    for s_, v in MEASURED.items():
+        x = A.free_energy(s_, level, "g", compute=False)
+        if not x or "g_kj" not in x:
+            continue
+        c = counts(s_)
+        rest = x["g_kj"] - sum(c.get(e, 0) * mu[e] for e in ref) - v[1]
+        if is_train(s_):
+            rows.append([c.get("C", 0), c.get("S", 0)])
+            y.append(rest)
+        else:
+            test.append(([c.get("C", 0), c.get("S", 0)], rest))
+    if len(rows) < 6:
+        return None
+    sol, *_ = np.linalg.lstsq(np.array(rows, float), np.array(y), rcond=None)
+    mu["C"], mu["S"] = float(sol[0]), float(sol[1])
+    err = [np.array(a) @ sol - b for a, b in test]
+    return {"mu": mu, "test_rmse": float(np.sqrt(np.mean(np.square(err)))) if err else 30.0, "n_test": len(err)}
+
+
+ELEMENT_GASES = {_canon(x) for x in ("[H][H]", "O=O", "N#N", "FF", "ClCl")}
+LEVEL_ORDER = ("ccsdt", "dft")          # best first; xTB + atom equivalents when neither is computed
+
+
 def species_table(cache: dict | None = None) -> dict[str, GasSpecies]:
-    """Every molecule with a Gibbs energy (measured or computed), keyed by SMILES."""
+    """Every molecule with a computed Gibbs energy of formation, keyed by SMILES. No measured value of any
+    molecule enters (unless USE_MEASURED): known molecules are computed like new ones."""
+    from . import abinitio as A
     cache = load_energies() if cache is None else cache
     fit = fit_atom_equivalents(cache)
+    searched = set(searched_species())
+    scales = {lv: first_principles_scale(lv) for lv in LEVEL_ORDER}
     out: dict[str, GasSpecies] = {}
     for s in all_species():
-        tb, tb_src = boiling_point(s)
-        m = Chem.MolFromSmiles(s)
-        formula = formula_of(s)
-        mw = rdMolDescriptors.CalcExactMolWt(Chem.AddHs(m)) if s != "[H][H]" else 2.016
-        if s in MEASURED:
+        if not USE_MEASURED:
+            best = None
+            for lv in LEVEL_ORDER:
+                sc = scales.get(lv)
+                x = A.free_energy(s, lv, "g", compute=False) if sc else None
+                if sc and x and "g_kj" in x and (s in MEASURED or storable(s)):
+                    best = (lv, x["g_kj"] - sum(n * sc["mu"].get(el, 0.0) for el, n in counts(s).items()), sc)
+                    break
+            if best:
+                lv, g_gas, sc = best
+                sp_ = computed_species(s, g_gas, sc["test_rmse"], s in searched)
+                sp_.source = f"{A.LEVELS[lv]} (+/-{sc['test_rmse']:.0f} kJ/mol on known test molecules)"
+                if s == "O":                                     # liquid water from its own computed solvation
+                    gl = A.liquid_g("O", lv, 373.0, compute=False)
+                    if gl is not None:
+                        sp_.g_kj = gl - sum(n * sc["mu"].get(el, 0.0) for el, n in counts(s).items())
+                if s in MEASURED:
+                    sp_.name = MEASURED[s][0]
+                    sp_.notes = [n_ for n_ in sp_.notes if not n_.startswith("not a measured")]
+                out[s] = sp_
+                continue
+            if s in ELEMENT_GASES:                # elements in their standard state: dfG = 0 by definition
+                tb, tb_src = boiling_point(s)
+                mw = 2.016 if s == "[H][H]" else rdMolDescriptors.CalcExactMolWt(Chem.MolFromSmiles(s))
+                out[s] = GasSpecies(s, MEASURED[s][0], formula_of(s), mw, tb, tb_src, 0.0, 0.0,
+                                    "element in its standard state (0 by definition)", s in TOXIC, [])
+                continue
+            if s in RADICALS:
+                continue
+        if USE_MEASURED and s in MEASURED:
+            tb, tb_src = boiling_point(s)
+            m = Chem.MolFromSmiles(s)
+            mw = rdMolDescriptors.CalcExactMolWt(Chem.AddHs(m)) if s != "[H][H]" else 2.016
             name, g_gas, g_liq, _, src = MEASURED[s]
             g = g_liq if (tb > T25 and g_liq is not None) else g_gas - (TROUTON * (tb - T25) / 1000 if tb > T25 else 0)
-            band, notes = 2.0, []
-        else:
-            e = cache.get(s)
-            if e is None or fit is None or tb >= XTB_CUTOFF_K or not storable(s):
-                continue
-            g_gas = e * EV_KJ - sum(n * fit.mu.get(el, 0.0) for el, n in counts(s).items())
-            g = g_gas - (TROUTON * (tb - T25) / 1000 if tb > T25 else 0)
-            name, src, band = formula, f"GFN2-xTB + atom equivalents (+/-{fit.rmse_loo:.0f} kJ/mol)", fit.rmse_loo
-            notes = ["not a measured compound: may not exist or may decompose"]
-        out[s] = GasSpecies(s, name, formula, mw, tb, tb_src, g, band, src, s in TOXIC, notes)
+            out[s] = GasSpecies(s, name, formula_of(s), mw, tb, tb_src, g, 2.0, src, s in TOXIC, [])
+            continue
+        e = cache.get(s)
+        if e is None or fit is None or boiling_point(s)[0] >= XTB_CUTOFF_K or not (storable(s) or s in MEASURED):
+            continue
+        out[s] = computed_species(s, g_gas_xtb(s, e, fit), fit.rmse_loo, s in searched)
+        if s in MEASURED:
+            out[s].name = MEASURED[s][0]
+            out[s].notes = [n_ for n_ in out[s].notes if not n_.startswith("not a measured")]
     return out
 
 
@@ -516,27 +641,35 @@ class Couple:
 _HEAVY = ("C", "N", "S", "F", "Cl")
 
 
-def couples(sp: dict[str, GasSpecies], max_k: int = 3) -> list[Couple]:
+def couples(sp: dict[str, GasSpecies], max_k: int = MAX_K, max_e: int = MAX_E,
+            only: str | None = None) -> list[Couple]:
     """Every couple kA A + a H2 -> kB B + w H2O between two species with the
-    same C, N, S, F, Cl (water and hydrogen themselves excluded)."""
+    same C, N, S, F, Cl (water and hydrogen themselves excluded).
+    only: return just the couples that involve this species (fast, for the AI search)."""
     by_sig: dict[tuple, list[str]] = {}
-    cnt = {s: counts(s) for s in sp}
+    cnt = {s: _counts(s) for s in sp}
+    g_water = sp["O"].g_kj if "O" in sp else G_WATER_L          # computed liquid water (G_WATER_L: measured fallback)
     for s in sp:
         if s in ("O", "[H][H]"):
             continue
         sig = tuple(cnt[s].get(e, 0) for e in _HEAVY)
         by_sig.setdefault(sig, []).append(s)
     out: list[Couple] = []
+    only_sig = tuple(cnt[only].get(e, 0) for e in _HEAVY) if only else None
     # oxygen-only species (O2, H2O2, O3) reduced all the way to water: A + a H2 -> w H2O
     for a in by_sig.get(tuple(0 for _ in _HEAVY), []):
+        if only and a != only:
+            continue
         w, h = cnt[a].get("O", 0), cnt[a].get("H", 0)
         h2 = (2 * w - h) / 2
         if h2 > 0:
-            dg = w * G_WATER_L - sp[a].g_kj
+            dg = w * g_water - sp[a].g_kj
             out.append(Couple(a, "O", 1, w, h2, 0, -dg * 1000 / (2 * h2 * F), sp[a].g_band_kj * 1000 / (2 * h2 * F)))
     sigs = list(by_sig)
     for s1 in sigs:
         for s2 in sigs:
+            if only and only_sig not in (s1, s2):
+                continue
             for ka in range(1, max_k + 1):
                 for kb in range(1, max_k + 1):
                     if math.gcd(ka, kb) != 1 or tuple(ka * x for x in s1) != tuple(kb * x for x in s2):
@@ -545,13 +678,13 @@ def couples(sp: dict[str, GasSpecies], max_k: int = 3) -> list[Couple]:
                         continue
                     for a in by_sig[s1]:
                         for b in by_sig[s2]:
-                            if a == b:
+                            if a == b or (only and only not in (a, b)):
                                 continue
                             w = ka * cnt[a].get("O", 0) - kb * cnt[b].get("O", 0)
                             h2 = (kb * cnt[b].get("H", 0) + 2 * w - ka * cnt[a].get("H", 0)) / 2
-                            if h2 <= 0 or abs(2 * h2 - round(2 * h2)) > 1e-9 or 2 * h2 > 12:
+                            if h2 <= 0 or abs(2 * h2 - round(2 * h2)) > 1e-9 or 2 * h2 > max_e:
                                 continue
-                            dg = kb * sp[b].g_kj + w * G_WATER_L - ka * sp[a].g_kj
+                            dg = kb * sp[b].g_kj + w * g_water - ka * sp[a].g_kj
                             e0 = -dg * 1000 / (2 * h2 * F)
                             band = math.sqrt((kb * sp[b].g_band_kj) ** 2 + (ka * sp[a].g_band_kj) ** 2) * 1000 / (2 * h2 * F)
                             out.append(Couple(a, b, ka, kb, h2, w, e0, band))
@@ -578,7 +711,19 @@ class GasCell:
     evidence: list[tuple[str, str]]
     toxic: list[str]
     computed_only: list[str]
-    name: str = ""
+    _name: str = ""
+    _sp: dict | None = field(default=None, repr=False, compare=False)
+
+    @property
+    def name(self) -> str:
+        """Reaction text, built on first use (millions of cells are screened, few are shown)."""
+        if not self._name and self._sp is not None:
+            self._name = reaction_text(self, self._sp)
+        return self._name
+
+    @name.setter
+    def name(self, v: str) -> None:
+        self._name = v
 
     @property
     def est_wh_kg(self) -> float:
@@ -599,7 +744,9 @@ class GasCell:
 def _cell(pos: Couple, neg: Couple | None, sp: dict[str, GasSpecies]) -> GasCell | None:
     e_neg = neg.e0 if neg else 0.0
     v = pos.e0 - e_neg
-    if v < MIN_VOLTAGE:
+    # must charge in water: below the oxygen limit (or like an electrolyser when the cell keeps its oxygen)
+    v_max = (2.0 if pos.ox == "O=O" else 1.229 + 0.4) - CHARGE_MARGIN_V
+    if v < MIN_VOLTAGE or v > v_max:
         return None
     ne_p = pos.n_e
     ne_n = neg.n_e if neg else 2
@@ -640,7 +787,7 @@ def _cell(pos: Couple, neg: Couple | None, sp: dict[str, GasSpecies]) -> GasCell
     band = math.hypot(pos.band_v, neg.band_v if neg else 0.0)
     c = GasCell(pos, neg, v, band, n_e, stoich, gas_moles, wh / gas_moles if gas_moles else math.inf,
                 kg, wh / kg, ev, toxic, computed)
-    c.name = reaction_text(c, sp)
+    c._sp = sp
     return c
 
 
@@ -653,22 +800,30 @@ def reaction_text(c: GasCell, sp: dict[str, GasSpecies]) -> str:
     return f"{fmt(ch)} -> {fmt(dis)}"
 
 
-def screen(cache: dict | None = None, top: int | None = None) -> tuple[list[GasCell], dict[str, GasSpecies]]:
+def screen(cache: dict | None = None, top: int | None = None,
+           sp: dict[str, GasSpecies] | None = None) -> tuple[list[GasCell], dict[str, GasSpecies]]:
     """Every sealed two-gas cell, lightest first (chemicals + tank walls, est_wh_kg)."""
-    sp = species_table(cache)
+    sp = species_table(cache) if sp is None else sp
     cps = couples(sp)
     pos = [c for c in cps if sp[c.ox].gas and c.e0 > 0.3]        # oxidant gases (charged positive)
     neg = [c for c in cps if sp[c.red].gas and c.e0 < 0.6]       # fuel gases (charged negative)
+    import bisect
+    neg.sort(key=lambda c: c.e0)
+    neg_e = [c.e0 for c in neg]
     out: dict[str, GasCell] = {}
     for p in pos:
-        for n in [None] + neg:
+        v_max = (2.0 if p.ox == "O=O" else 1.229 + 0.4) - CHARGE_MARGIN_V
+        # only fuel couples that give a voltage inside [MIN_VOLTAGE, v_max] (the same test as _cell, done first)
+        lo, hi = bisect.bisect_left(neg_e, p.e0 - v_max), bisect.bisect_right(neg_e, p.e0 - MIN_VOLTAGE)
+        for n in [None] + neg[lo:hi]:
             if n is not None and (n.ox == p.ox or n.red == p.red):
                 continue
             c = _cell(p, n, sp)
             if c is not None and (c.key not in out or c.wh_per_mol_gas > out[c.key].wh_per_mol_gas):
                 out[c.key] = c
     cells = sorted(out.values(), key=lambda c: -c.est_wh_kg)
-    return (cells[:top] if top else cells), sp
+    top = top or MAX_CELLS
+    return cells[:top], sp
 
 
 def reference_h2_o2(cells: list[GasCell]) -> GasCell | None:
