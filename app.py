@@ -151,7 +151,7 @@ t = make_targets(SETTINGS_NOW)
 E_KWH = power * hours
 
 
-MODEL_VERSION = 5   # bump when model outputs change shape, so cached results are recomputed
+MODEL_VERSION = 6   # bump when model outputs change shape, so cached results are recomputed
 
 
 def tkey(t_: dict) -> str:
@@ -384,12 +384,20 @@ def show_cost(parts: dict, ctx: dict, kp: str):
     st.markdown("**Why it costs this much**\n" + "\n".join(f"- {x}" for x in explain.explain_cost(parts, ctx)))
 
 
+def band_text(band) -> str:
+    """'lo-hi' build cost in USD/kWh over the reaction-speed range."""
+    if not band:
+        return ""
+    f = lambda x: f"{x:,.0f}" if math.isfinite(x) else "not buildable"
+    return f"{f(band[0])}-{f(band[2])}"
+
+
 def li_metrics(c, kp: str):
     cols = st.columns(4)
     cols[0].metric("Energy per kg", f"{c.wh_kg:.0f} Wh/kg", f"{c.wh_kg - LI['wh_kg']:+.0f} vs Li-ion")
     cols[1].metric("Energy per litre", f"{c.wh_l:.0f} Wh/L", f"{c.wh_l - LI['wh_l']:+.0f} vs Li-ion")
-    cols[2].metric("Build cost", f"${c.capex_usd_kwh:.0f}/kWh", f"{c.capex_usd_kwh - LI['usd_kwh_stationary']:+.0f} vs Li-ion",
-                   delta_color="inverse")
+    v_, d_, h_ = explain.cost_range(c.capex_usd_kwh, c.capex_band, LI["usd_kwh_stationary"])
+    cols[2].metric("Build cost", v_, d_, delta_color="inverse", help=h_)
     cols[3].metric("Recharge", f"{c.recharge_h * 60:.0f} min", f"{c.recharge_h * 60 * 0.7 - LI['charge_min_10_80']:+.0f} vs Li-ion 10-80 %",
                    delta_color="inverse")
 
@@ -433,7 +441,9 @@ def render_molecule(smiles: str, kp: str):
                                     "chem_kg_per_kwh": pairs.kg_per_kwh(r.mw, max(sum(steps[:k_]) / k_, 0.05), 2 * k_),
                                     "chem_usd_kg": sc.usd_kg, "synth": best.synth}, kp)
         st.dataframe(pd.DataFrame([{"option": x.name, "Wh/kg": round(x.wh_kg, 1), "Wh/L": round(x.wh_l, 1),
-                                    "build USD/kWh": round(x.capex_usd_kwh), "LCOS": round(x.lcos_usd_kwh, 3),
+                                    "build USD/kWh": round(x.capex_usd_kwh),
+                                    "build p10-p90 (reaction speed)": band_text(x.capex_band),
+                                    "LCOS": round(x.lcos_usd_kwh, 3),
                                     "efficiency": f"{x.rte:.2f} ({x.rte_band[0]:.2f}-{x.rte_band[2]:.2f})",
                                     "recharge min": round(x.recharge_h * 60), "burst kg TNT": round(x.store.burst_tnt_kg, 3)}
                                    for x in cfgs]), hide_index=True, width="stretch")
@@ -981,7 +991,9 @@ with tabs[4]:
     if cfgs:
         od = pd.DataFrame([{"couple": n, "option": c.name, "pressure": c.store.pressure,
                             "Wh/kg": round(c.wh_kg, 1), "Wh/L": round(c.wh_l, 1),
-                            "build USD/kWh": round(c.capex_usd_kwh), "LCOS USD/kWh": round(c.lcos_usd_kwh, 3),
+                            "build USD/kWh": round(c.capex_usd_kwh),
+                            "build p10-p90 (reaction speed)": band_text(c.capex_band),
+                            "LCOS USD/kWh": round(c.lcos_usd_kwh, 3),
                             "efficiency p50": round(c.rte, 2),
                             "efficiency p10-p90": f"{c.rte_band[0]:.2f}-{c.rte_band[2]:.2f}",
                             "recharge time, min": round(c.recharge_h * 60),

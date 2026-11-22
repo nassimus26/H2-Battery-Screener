@@ -7,6 +7,8 @@ physical reason, and what to change in the app (sidebar or search settings).
 
 from __future__ import annotations
 
+import math
+
 
 
 def explain_cost(parts: dict, ctx: dict) -> list[str]:
@@ -88,3 +90,23 @@ def explain_cost(parts: dict, ctx: dict) -> list[str]:
     if ctx.get("li_usd_kwh") and total / e_kwh > ctx["li_usd_kwh"]:
         out.append(f"For comparison, a lithium-ion pack costs about {ctx['li_usd_kwh']:.0f} USD/kWh.")
     return out
+
+
+def cost_range(capex_usd_kwh: float, band: tuple, li_usd_kwh: float) -> tuple[str, str, str]:
+    """(value, delta, help) for the build-cost metric: the cost at the middle
+    reaction speed, its gap to Li-ion, and the p10-p90 range over the
+    reaction-speed (exchange-current) uncertainty. band = (p10, p50, p90)."""
+    value = f"${capex_usd_kwh:,.0f}/kWh"
+    gap = f"{capex_usd_kwh - li_usd_kwh:+,.0f}"
+    if not band or not math.isfinite(band[0]):
+        return value, f"{gap} vs Li-ion", "Reaction-speed range not computed."
+    lo, mid, hi = band
+    fmt = lambda x: f"${x:,.0f}" if math.isfinite(x) else "cannot be built"
+    span = (f"{lo - li_usd_kwh:+,.0f} to {hi - li_usd_kwh:+,.0f}" if math.isfinite(hi)
+            else f"{lo - li_usd_kwh:+,.0f} to (cannot be built)")
+    delta = f"{gap} vs Li-ion (p10-p90 {span})"
+    help_ = (f"Shown: cost when both electrodes react at the middle of their speed range (the cost split below "
+             f"uses it). Nobody has measured how fast these molecules react, so the stack is re-sized for "
+             f"random reaction speeds: 10 % of them cost less than {fmt(lo)}/kWh (fast), half less "
+             f"than {fmt(mid)}/kWh, 90 % less than {fmt(hi)}/kWh (slow). Li-ion pack: ${li_usd_kwh:,.0f}/kWh.")
+    return value, delta, help_

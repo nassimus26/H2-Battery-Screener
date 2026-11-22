@@ -115,3 +115,31 @@ def test_ionised_molecules_do_not_use_esol():
     d = M.descriptors("O=C1c2ccc(S(=O)(=O)O)cc2C(=O)c2cc(S(=O)(=O)O)ccc21")
     assert d["ionised"] and d["sol"] >= M.IONISED_SOL_M
     assert not M.descriptors("O=C1C=CC(=O)C=C1")["ionised"]
+
+
+def test_build_cost_range_over_reaction_speed():
+    t = tomllib.load(open(ROOT / "targets.toml", "rb"))
+    n = mol("O=C1c2ccccc2C(=O)c2ccccc21", 0.1, 2.0)
+    p = mol("O=C1C=CC(=O)C=C1", 0.75, 2.0)
+    pr = pairs.make_pair(n, p)
+    c = options.pair_configuration(pr, t, np.random.default_rng(0))
+    lo, mid, hi = c.capex_band
+    assert lo <= mid <= hi
+    assert lo < c.capex_usd_kwh < hi            # the middle reaction speed lies inside the range
+    assert hi > 1.5 * lo                        # four decades of reaction speed matter
+    assert options.pair_configuration(pr, t, None).capex_band == ()   # no rng: no range
+
+
+def test_cost_band_counts_unbuildable_draws_as_expensive():
+    lo, mid, hi = options.cost_band([100.0] * 8 + [math.inf] * 2 + [50.0])
+    assert lo == 100.0 and mid == 100.0 and math.isinf(hi)
+    assert options.cost_band([3.0, 1.0, 2.0]) == (1.0, 2.0, 3.0)
+
+
+def test_cost_range_text():
+    from h2screener.explain import cost_range
+    v, d, h = cost_range(1995.0, (1600.0, 2400.0, 5100.0), 70.0)
+    assert v == "$1,995/kWh" and d == "+1,925 vs Li-ion (p10-p90 +1,530 to +5,030)"
+    assert "$2,400" in h
+    assert cost_range(500.0, (), 70.0)[1] == "+430 vs Li-ion"
+    assert "cannot be built" in cost_range(500.0, (400.0, 600.0, math.inf), 70.0)[1]

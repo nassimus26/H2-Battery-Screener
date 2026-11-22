@@ -54,6 +54,7 @@ class Config:
     w_kg: float
     notes: list[str] = field(default_factory=list)
     cost_parts: dict = field(default_factory=dict)   # USD per part (build cost)
+    capex_band: tuple = ()      # p10, p50, p90 build cost (USD/kWh) over the reaction-speed range
     synth: list = field(default_factory=list)        # (SynthCost, kg) per organic molecule
 
     @property
@@ -80,8 +81,9 @@ def air_cell(cells: list[CellReaction], medium: str = "acid") -> CellReaction | 
 
 def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None,
               fixed=None, w_comp_v=0.0, rng=None, recharge=None, liquid=False) -> Config | None:
-    """Scan current density; return the lowest-LCOS feasible Config."""
-    u, d, sm = t["use"], t["design"], t["system"]
+    """Scan current density; return the lowest-LCOS feasible Config. With
+    rng, also the efficiency band and the build-cost band (capex_band)."""
+    u = t["use"]
     t_k = u["temperature_c"] + 273.15
     aqueous = cell.medium in ("acid", "alkaline", "aqueous (pH-free)")
     v_ch_max = E_O2 + u["oxygen_margin_v"] if aqueous else cell.e0 + 0.5
@@ -97,6 +99,61 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
         frac = fixed["O2"] / P_STD
         params["ilim"] = Value(math.sqrt(b[0] * b[1]) * frac, b[0] * frac, b[1] * frac, "physics",
                                "O2 from air (Henry's law x partial pressure)", log=True)
+    best, model, ocv = _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_comp_v,
+                             recharge, liquid, v_ch_max)
+    if best is None or rng is None:
+        return best
+    xs = model.sample(rng, 200)
+    r_mc, _, vc_mc = performance.efficiency(model, xs, np.full(200, best.i_a_cm2), ocv)
+    if w_comp_v:
+        r_mc = r_mc * vc_mc / (vc_mc + w_comp_v)
+    best.rte_band = performance.pct(r_mc)
+    # Build cost over the reaction-speed uncertainty: the exchange currents of
+    # both electrodes are drawn from their ranges and the stack is re-sized
+    # (new current density, new area) for each draw.
+    # Store sizes repeat closely across draws: build each to 0.5 % in hydrogen once.
+    memo: dict = {}
+
+    def store_approx(h2_mol):
+        if h2_mol == 0:
+            return build_store(h2_mol)
+        k = (h2_mol > 0, round(math.log(abs(h2_mol)) / 0.005))
+        if k not in memo:
+            memo[k] = build_store(math.copysign(math.exp(k[1] * 0.005), h2_mol))
+        return memo[k]
+
+    costs = []
+    for i0p, i0n in zip(params["i0_pos"].sample(rng, COST_DRAWS), params["i0_neg"].sample(rng, COST_DRAWS)):
+        q = dict(params, i0_pos=_fixed(params["i0_pos"], i0p), i0_neg=_fixed(params["i0_neg"], i0n))
+        c, _, _ = _scan(cell, t, mode, p_lo, p_hi, q, store_approx, needs_pt, fixed, w_comp_v, recharge, liquid,
+                        v_ch_max)
+        costs.append(c.capex_usd_kwh if c is not None else math.inf)
+    best.capex_band = cost_band(costs)
+    return best
+
+
+COST_DRAWS = 32     # reaction-speed draws for the build-cost range
+
+
+def _fixed(v: Value, x: float) -> Value:
+    return Value(float(x), float(x), float(x), v.kind, v.source, v.log)
+
+
+def cost_band(costs) -> tuple[float, float, float]:
+    """(p10, p50, p90) of build costs; a draw that cannot be built at all
+    (no current meets the charge-voltage limit) counts as infinitely expensive."""
+    a = np.sort(np.asarray(costs, dtype=float))
+    if a.size == 0:
+        return (math.nan, math.nan, math.nan)
+    q = lambda f: float(a[min(int(round(f * (a.size - 1))), a.size - 1)])
+    return q(0.1), q(0.5), q(0.9)
+
+
+def _scan(cell, t, mode, p_lo, p_hi, params, build_store, needs_pt, fixed, w_comp_v, recharge, liquid, v_ch_max):
+    """Lowest-LCOS Config over the current-density grid for these cell inputs
+    (nominal values), with the model and the OCV curve it used."""
+    u, d, sm = t["use"], t["design"], t["system"]
+    t_k = u["temperature_c"] + 273.15
     model = CellModel(cell, t_k, p_lo, p_hi, params, fixed_fugacity=fixed or {})
     x = _nominal(params)
     ocv = model.ocv(performance.SOC)
@@ -112,7 +169,7 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
         if r > 0 and vc <= v_ch_max:
             feas.append((i, r, vd, vc))
     if not feas:
-        return None
+        return None, model, ocv
     i_fast = max(f[0] for f in feas)
     best = None
     for i, r, vd, vc in feas:
@@ -124,7 +181,7 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
         h2_mol = n_rxn * cell.h2_consumed()
         st = build_store(h2_mol)
         if st is None:
-            return None
+            return None, model, ocv
         mass, vol, capex = st.mass_kg, st.volume_l / 1000, st.capex_usd
         parts = {"hydrogen storage": st.capex_usd}
         synth: list = []
@@ -171,13 +228,7 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
                      power_w / mass, cost_parts=parts, synth=synth)
         if best is None or cfg.lcos_usd_kwh < best.lcos_usd_kwh:
             best = cfg
-    if rng is not None:
-        xs = model.sample(rng, 200)
-        r_mc, _, vc_mc = performance.efficiency(model, xs, np.full(200, best.i_a_cm2), ocv)
-        if w_comp_v:
-            r_mc = r_mc * vc_mc / (vc_mc + w_comp_v)
-        best.rte_band = performance.pct(r_mc)
-    return best
+    return best, model, ocv
 
 
 def configurations(cell: CellReaction, t: dict, rng: np.random.Generator,
