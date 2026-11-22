@@ -121,6 +121,9 @@ with st.sidebar:
         pe_ = stackcost.POWER_ELECTRONICS
         st.markdown(f"**Power electronics:** {pe_.range_text('USD per kW')}  \n<small>{pe_.basis}</small>",
                     unsafe_allow_html=True)
+        st.markdown("**Tanks, pumps, pipes (liquid cells):** itemised prices of a built 10 kW flow battery "
+                    "(Noack et al. 2016: tanks 1.1 EUR per litre, pumps, piping, valves, heat exchangers, sensors), "
+                    "scaled with size^0.6.")
         st.markdown("**Molecules:** estimated for each molecule from how hard it is to make (shown in its details).")
     default("cfg_topn", 20)
     top_n = st.slider("Candidates to size in detail", 5, 60, key="cfg_topn")
@@ -139,7 +142,7 @@ t["ranking"].update(weights)
 E_KWH = power * hours
 
 
-MODEL_VERSION = 4   # bump when model outputs change shape, so cached results are recomputed
+MODEL_VERSION = 5   # bump when model outputs change shape, so cached results are recomputed
 
 
 def tkey(t_: dict) -> str:

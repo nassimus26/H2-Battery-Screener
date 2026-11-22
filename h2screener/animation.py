@@ -106,5 +106,5 @@ body{{margin:0;background:transparent;font-family:system-ui,-apple-system,sans-s
  In the tanks, the bright layer is charged liquid (N-H2 on the left, P on the right) and the dark part is spent liquid;
  {'charging refills the bright layers' if rev else 'discharging empties the bright layers'}.<br>
  The hydrogen never becomes a gas: it travels as protons and electrons from one molecule to the other.
- Energy is set by the tanks (litres of liquid); power by the cell area (m2). Tanks, pumps and pipes are not costed yet.</div>
+ Energy is set by the tanks (litres of liquid); power by the cell area (m2). Tanks, pumps and pipes are priced from a built 10 kW flow battery (Noack et al. 2016), scaled to the system size.</div>
 </div></body></html>"""

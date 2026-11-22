@@ -79,3 +79,34 @@ def stack(kind: str, scale: str = "mass") -> Estimate:
 
 def geometric_mid(lo: float, hi: float) -> float:
     return math.sqrt(lo * hi)
+
+
+# ------------------------------------------------------------------ tanks, pumps, pipes
+
+EUR_USD = 1.1           # 2016 exchange rate, for the Noack et al. prices
+SIZE_EXPONENT = 0.6     # process equipment cost ~ size^0.6 (Darling et al., EES 2014)
+REF_LITRES = 8257.0     # Noack et al. 2016: electrolyte volume of their 10 kW / 120 kWh system
+REF_KW = 10.0
+# Their itemised prices (EUR, Tables 1-2), for two liquid loops:
+REF_TANKS_EUR = 9082.0                  # 1.1 EUR per litre of tank
+REF_FLUID_EUR = 2 * 1000 + 50 * 20 + 14 * 30   # 2 pumps, 50 m of piping, 14 valves = 3,420
+REF_HEAT_EUR = 2 * 1500                 # 2 heat exchangers
+REF_SENSORS_EUR = 10 * 250 + 2 * 330    # 10 sensors, 2 actuators
+
+
+def flow_hardware(litres: float, power_kw: float, loops: int = 2) -> dict[str, float]:
+    """USD for the tanks and the liquid loops of a flow cell.
+
+    Prices from the itemised 10 kW / 120 kWh flow battery of Noack et al.
+    (Energies 9 (2016) 627), scaled to this system with the 0.6 power law:
+    tanks by litres of liquid, pumps, pipes, valves, heat exchangers and
+    sensors by power. 'loops' is the number of pumped liquids (2 for two
+    molecules, 1 for a molecule against hydrogen gas). These are small-series
+    prices; no mass-production discount is applied."""
+    if litres <= 0:
+        return {}
+    share = loops / 2
+    tanks = REF_TANKS_EUR * share * (litres / loops / (REF_LITRES / 2)) ** SIZE_EXPONENT
+    p = (power_kw / REF_KW) ** SIZE_EXPONENT
+    loop = (REF_FLUID_EUR + REF_HEAT_EUR + REF_SENSORS_EUR) * share * p
+    return {"electrolyte tanks": tanks * EUR_USD, "pumps, pipes and controls": loop * EUR_USD}

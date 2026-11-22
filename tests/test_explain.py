@@ -1,5 +1,7 @@
 """Plain-language cost explanations."""
 
+import pytest
+
 from h2screener import stackcost
 from h2screener.explain import explain_cost
 
@@ -37,3 +39,20 @@ def test_stack_prices_follow_cell_kind_and_scale():
     assert stackcost.stack("liquid", "small").usd > 10 * l.usd      # prototypes cost far more
     for e in (g, l, stackcost.POWER_ELECTRONICS):
         assert e.lo < e.usd < e.hi and e.basis
+
+
+def test_flow_hardware_matches_the_reference_and_scales():
+    ref = stackcost.flow_hardware(stackcost.REF_LITRES, stackcost.REF_KW, 2)
+    assert ref["electrolyte tanks"] == pytest.approx(9082 * 1.1)
+    assert ref["pumps, pipes and controls"] == pytest.approx((3420 + 3000 + 3160) * 1.1)
+    big = stackcost.flow_hardware(10 * stackcost.REF_LITRES, 10 * stackcost.REF_KW, 2)
+    assert 3 < big["electrolyte tanks"] / ref["electrolyte tanks"] < 10     # economies of scale
+    one = stackcost.flow_hardware(stackcost.REF_LITRES / 2, stackcost.REF_KW, 1)
+    assert one["electrolyte tanks"] == pytest.approx(ref["electrolyte tanks"] / 2)
+    assert stackcost.flow_hardware(0, 10, 2) == {}
+
+
+def test_tank_heavy_liquid_design_explains_the_tanks():
+    lines = explain_cost({"electrolyte tanks": 5000, "pumps, pipes and controls": 3000, "cell stack": 1000},
+                         {"e_kwh": 600, "power_kw": 100})
+    assert any("Noack" in x and "litres" in x for x in lines)

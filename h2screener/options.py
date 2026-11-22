@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from . import estimate, materials, performance, realgas, storage, synthesis
+from . import estimate, materials, performance, realgas, stackcost, storage, synthesis
 from .constants import F, M_H2, P_STD, WH
 from .performance import CellModel
 from .provenance import Value
@@ -149,6 +149,9 @@ def _optimise(cell, t, mode, p_lo, p_hi, build_store, needs_pt=True, i0_neg=None
             water = n_rxn * cell.dissolved_moles() / max(sol, 1e-3)
             mass += water
             vol += water / 1000
+            for k, v in stackcost.flow_hardware(water, d["power_kw"], 2 if liquid else 1).items():
+                capex += v
+                parts[k] = v
         stack = area_cm2 * sm["stack_areal_mass_g_cm2"] / 1000
         mass += stack
         vol += area_cm2 * sm["stack_thickness_cm"] / 1e6

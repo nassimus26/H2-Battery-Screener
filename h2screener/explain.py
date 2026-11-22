@@ -61,6 +61,14 @@ def explain_cost(parts: dict, ctx: dict) -> list[str]:
                    "fast because gas stays inside at the 'empty' pressure. -> Check the cost-vs-pressure chart; "
                    "hydride storage (constant low pressure) or the two-molecule mode (no gas) removes the tank.")
 
+    loops = share.get("electrolyte tanks", 0) + share.get("pumps, pipes and controls", 0)
+    if loops > 0.15:
+        out.append("The tanks and liquid loops are a large part. Tank cost grows with the litres of liquid, which "
+                   "shrink when the molecules dissolve better or carry more hydrogen per molecule; pumps, pipes, "
+                   "heat exchangers and sensors grow with power. Prices are those of a built 10 kW flow battery "
+                   "(Noack et al. 2016), scaled with size^0.6 (bigger systems cost less per unit); mass production "
+                   "would be cheaper.")
+
     for sc, kg in ctx.get("synth") or []:
         out.append(f"Making the molecule {sc.smiles}: {sc.describe()}. {kg / e_kwh:.1f} kg per kWh, so "
                    f"{sc.usd_kg * kg / e_kwh:,.0f} USD/kWh ({sc.lo * kg / e_kwh:,.0f}-{sc.hi * kg / e_kwh:,.0f}). "
