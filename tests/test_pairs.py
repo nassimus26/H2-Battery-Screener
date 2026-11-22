@@ -65,3 +65,34 @@ def test_two_electron_steps_double_capacity():
     one = pairs.pair_value([0.1], 1, 200, [0.8], 1, 200)[1]
     two = pairs.pair_value([0.1], 1, 200, [0.8, 0.8], 1, 200)[1]
     assert two > one
+
+
+def test_groups_that_fall_apart_in_water_are_flagged():
+    from h2screener import molecules as M
+    assert any("aminal" in x for x in M.instability("CNCN=c1c2nc(=O)[nH]c(=O)c-2nc1=O"))
+    assert any("imine" in x for x in M.instability("CNCN=c1c2nc(=O)[nH]c(=O)c-2nc1=O"))
+    assert any("hydrazine" in x for x in M.instability("CNN1CN=C2C(=O)NC(=O)N=C21"))
+    assert any("nitroso" in x for x in M.instability("NC(=O)C(=O)N=O"))
+    for good in ("O=C1C=CC(=O)C=C1", "O=C1c2ccccc2C(=O)c2ccccc12", "O=c1[nH]c(=O)c2nc3ccccc3nc2[nH]1",
+                 "C[n+]1ccc(-c2cc[n+](C)cc2)cc1", "CC1(C)CC(O)CC(C)(C)N1[O]"):
+        assert M.instability(good) == [], good
+
+
+def test_pair_list_shows_different_combinations():
+    def mol(name, steps):
+        r = M.MolResult(name, name + "H2", 0.0, steps[0], steps=steps, forms=[name + "H2"] * len(steps))
+        r.reduced, r.mw, r.solubility_mol_l, r.sa = name + "H2", 150.0, 1.0, 2.0
+        return r
+    star = mol("S", [1.1, 0.02])                 # strong on both sides: pairs with everything
+    others = [mol(f"N{i}", [0.05 + 0.01 * i]) for i in range(4)] + [mol(f"P{i}", [0.8 - 0.01 * i]) for i in range(4)]
+    import h2screener.pairs as PP
+    orig = PP._unstable
+    PP._unstable = lambda s: False               # made-up names are not SMILES
+    try:
+        all_ = PP.best_pairs([star] + others, 20)
+        div = PP.best_pairs([star] + others, 20, max_per_molecule=2)
+    finally:
+        PP._unstable = orig
+    count = lambda ps: sum((p.neg.smiles == "S") + (p.pos.smiles == "S") for p in ps)
+    assert count(all_) > 2 and count(div) <= 2
+    assert len({(p.neg.smiles, p.pos.smiles) for p in div}) == len(div) >= 4

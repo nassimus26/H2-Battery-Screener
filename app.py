@@ -1091,7 +1091,7 @@ with tabs[6]:
     pk = q4.slider("Exploration (0 = exploit, 3 = explore)", 0.0, 3.0, step=0.1, key="pair_kappa", help='Balance between exploiting and exploring. 0 = only compute molecules the AI is confident are good (fast improvement, may get stuck). Higher = also compute molecules it is unsure about, to discover new kinds of chemistry (slower, broader). 1-1.5 is a good middle.')
     search_panel("pair", dict(generations=int(pg), batch=int(pb), max_heavy=int(ph), kappa=pk), "pair")
     pool = view_pool("pair")
-    ps = pairs.best_pairs(pool, 40)
+    ps = pairs.best_pairs(pool, 40, max_per_molecule=2)
     if ps:
         pt = pd.DataFrame([{"negative molecule": p.neg.smiles, "E neg V": round(p.neg.e0, 2),
                             "positive molecule": p.pos.smiles, "E pos V": round(p.pos.e0, 2),

@@ -144,7 +144,11 @@ def make_pair(n: M.MolResult, p: M.MolResult, kn: int = 1, kp: int = 1) -> Pair:
     return pr
 
 
-def best_pairs(pool: list[M.MolResult], top: int = 50) -> list[Pair]:
+def best_pairs(pool: list[M.MolResult], top: int = 50, max_per_molecule: int | None = None) -> list[Pair]:
+    """Best pairs by score. With max_per_molecule, a molecule appears in at
+    most that many pairs (a molecule paired with itself counts twice), so the
+    list shows different combinations instead of one strong molecule paired
+    with everything."""
     ok = [r for r in pool if usable(r)]
     best: dict[tuple, Pair] = {}
     for n in ok:
@@ -159,7 +163,20 @@ def best_pairs(pool: list[M.MolResult], top: int = 50) -> list[Pair]:
                         if key not in best or pr.score > best[key].score:
                             best[key] = pr
     out = sorted(best.values(), key=lambda x: -x.score)
-    return out[:top]
+    if max_per_molecule is None:
+        return out[:top]
+    seen: dict[str, int] = {}
+    keep = []
+    for pr in out:
+        if seen.get(pr.neg.smiles, 0) >= max_per_molecule or seen.get(pr.pos.smiles, 0) >= max_per_molecule \
+                or (pr.neg.smiles == pr.pos.smiles and seen.get(pr.neg.smiles, 0) + 2 > max_per_molecule):
+            continue
+        for s in (pr.neg.smiles, pr.pos.smiles):
+            seen[s] = seen.get(s, 0) + 1
+        keep.append(pr)
+        if len(keep) >= top:
+            break
+    return keep
 
 
 def best_partner_score(e: float, sol: float, mw: float, pen: float, pool: list[M.MolResult]) -> float:

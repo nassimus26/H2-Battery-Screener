@@ -72,6 +72,23 @@ BRENK_UNSTABLE = {
 # Not in the Brenk list but impossible to store: cumulated double bonds
 # (C=C=C), and double bonds at a bridgehead of two small fused rings.
 EXTRA_UNSTABLE = [Chem.MolFromSmarts(x) for x in ("[#6]=[#6]=[#6]", "[#6]=[#6]=[#7,#8]")]
+# Groups that hydrolyse in water (textbook reactivity), written so they also
+# match atoms RDKit marks aromatic, which the Brenk patterns miss:
+#   aminal / hemiaminal outside a ring: N-C-N, N-C-O on a chain carbon
+#   (falls apart to formaldehyde or an aldehyde plus the amine)
+#   imine on a nitrogen outside a ring, N-alkyl or N-H (Schiff base: C=N + water
+#   -> C=O + amine)
+#   N-N single bond that is not part of an amide or an aromatic ring (hydrazine:
+#   oxidised and split by air and by the cell itself)
+#   C-nitroso (C-N=O): dimerises and reacts; acyl nitroso compounds are
+#   short-lived intermediates
+HYDROLYSIS = {name: Chem.MolFromSmarts(x) for name, x in (
+    ("aminal or hemiaminal outside a ring (hydrolyses)", "[#7,#8]-[CX4;!R]-[#7,#8]"),
+    ("imine on an outside nitrogen (hydrolyses)", "[#6X3]=[#7X2;!R]-[#6X4]"),
+    ("N-H imine (hydrolyses)", "[#6X3]=[#7X2H1]"),
+    ("hydrazine N-N single bond", "[#7X3;!a;!$([#7]-[#6]=[#8])]-[#7X3;!a;!$([#7]-[#6]=[#8])]"),
+    ("C-nitroso group (dimerises, reactive)", "[#6]-[NX2]=[OX1]"),
+)}
 
 
 @lru_cache(maxsize=1)
@@ -110,6 +127,7 @@ def instability(smiles: str) -> list[str]:
         out.append("cumulated double bonds")
     if strained(m):
         out.append("strained fused small rings")
+    out += [name for name, q in HYDROLYSIS.items() if q is not None and m.HasSubstructMatch(q)]
     return out
 # Functional groups that decompose in water or on their own (textbook reactivity;
 # heuristic filter): peroxides, anhydrides, acyl cyanides/halides, isocyanates,

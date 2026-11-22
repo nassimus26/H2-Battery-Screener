@@ -299,7 +299,23 @@ def search(generations: int = 10, batch: int = 8, children: int = 300, max_heavy
         if mode == "pair":
             value = {r.smiles: P.best_partner_score(r.e0, r.solubility_mol_l, r.mw, P._penalty(r), done)
                      if P.usable(r) else 0.0 for r in done}
-            parents = sorted(done, key=lambda r: -value[r.smiles])[: max(4, batch)]
+            # breed from the molecules of several different pairs (each molecule in
+            # one pair at most), then the best partners, so the search explores
+            # new combinations instead of one strong molecule and its look-alikes
+            by_smiles = {r.smiles: r for r in done}
+            parents, have = [], set()
+            for pr in P.best_pairs(done, max(4, batch), max_per_molecule=1):
+                for s in (pr.neg.smiles, pr.pos.smiles):
+                    if s not in have:
+                        have.add(s)
+                        parents.append(by_smiles[s])
+            for r in sorted(done, key=lambda r: -value[r.smiles]):
+                if len(parents) >= 2 * max(4, batch):
+                    break
+                if r.smiles not in have and value[r.smiles] > 0:
+                    have.add(r.smiles)
+                    parents.append(r)
+            parents = parents or sorted(done, key=lambda r: -value[r.smiles])[: max(4, batch)]
         else:
             parents = sorted((r for r in done if not P._unstable(r.smiles)),
                              key=lambda r: -r.objective)[: max(4, batch)]
