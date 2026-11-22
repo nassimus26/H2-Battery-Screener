@@ -22,6 +22,9 @@ every couple the data allows is generated, then pushed through the same physics.
 | Design | power x duration sizing, current density chosen for the lowest levelised cost, Pareto front | works |
 | Molecules | any molecule: H2-addition partners, xTB/ALPB voltages calibrated on p-benzoquinone (+/-0.3 V), tautomer check, ESOL solubility, SA score, PubChem novelty; AI search loop | works |
 
+How every part works (simulation, AI search, prices and their sources,
+limits): [docs/approach.md](docs/approach.md).
+
 Results that rest on assumptions say so: each input is tagged `database`,
 `physics`, `assumption` or `unknown`, and every range is in `targets.toml`.
 
