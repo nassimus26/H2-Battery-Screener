@@ -17,7 +17,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 from plotly.subplots import make_subplots
 
 from h2screener import ai_search, design, discover, explain, options, pairs, rank, reference, runs, stackcost, synthesis, animation
@@ -40,7 +39,7 @@ PRESETS = {
 SS = st.session_state
 SS["_full_run"] = True                      # set to False at the end of every full page run
 SETTING_KEYS = ["cfg_tab", "mol_live", "pair_live", "cfg_preset", "cfg_power", "cfg_hours", "cfg_pmax", "cfg_pmin", "cfg_rte", "cfg_life", "cfg_elec",
-                "cfg_topn", "cfg_scale", "mol_gens", "mol_batch", "mol_heavy", "mol_kappa",
+                "cfg_topn", "cfg_scale", "watchlist", "mol_gens", "mol_batch", "mol_heavy", "mol_kappa",
                 "pair_gens", "pair_batch", "pair_heavy", "pair_kappa"] + [f"w_{k}" for k in BASE["ranking"]
                                                                          if isinstance(BASE["ranking"][k], (int, float))]
 if "_settings_loaded" not in SS:            # restore the last settings after a page reload
@@ -129,16 +128,26 @@ with st.sidebar:
     top_n = st.slider("Candidates to size in detail", 5, 60, key="cfg_topn")
     st.caption("Settings are saved automatically and come back after a page reload.")
 
-t = copy.deepcopy(BASE)
-t["use"].update(p_max_bar=float(p_max), p_min_bar=float(p_min), rte_target=rte,
-                charge_hours_target=pre["charge_hours_target"],
-                pressure_grid_bar=sorted({x for x in [3, 5, 10, 20, 30, 45, 60, 100, 150, 200] if p_min < x <= p_max} | {p_max}))
-t["design"].update(power_kw=power, hours=hours, lifetime_years=life, electricity_usd_kwh=elec,
-                   production_scale=SS["cfg_scale"],
-                   stack_usd_m2=stackcost.stack("gas", SS["cfg_scale"]).usd,
-                   stack_usd_m2_liquid=stackcost.stack("liquid", SS["cfg_scale"]).usd,
-                   power_electronics_usd_kw=stackcost.POWER_ELECTRONICS.usd)
-t["ranking"].update(weights)
+def make_targets(s: dict) -> dict:
+    """Model inputs from the sidebar values (also used by the one-setting sweep)."""
+    t_ = copy.deepcopy(BASE)
+    pmx, pmn = float(s["p_max"]), float(s["p_min"])
+    t_["use"].update(p_max_bar=pmx, p_min_bar=pmn, rte_target=float(s["rte"]),
+                     charge_hours_target=s["charge_hours_target"],
+                     pressure_grid_bar=sorted({x for x in [3, 5, 10, 20, 30, 45, 60, 100, 150, 200]
+                                               if pmn < x <= pmx} | {pmx}))
+    t_["design"].update(power_kw=float(s["power"]), hours=float(s["hours"]), lifetime_years=int(s["life"]),
+                        electricity_usd_kwh=float(s["elec"]), production_scale=s["scale"],
+                        stack_usd_m2=stackcost.stack("gas", s["scale"]).usd,
+                        stack_usd_m2_liquid=stackcost.stack("liquid", s["scale"]).usd,
+                        power_electronics_usd_kw=stackcost.POWER_ELECTRONICS.usd)
+    t_["ranking"].update(s["weights"])
+    return t_
+
+
+SETTINGS_NOW = dict(power=power, hours=hours, p_max=p_max, p_min=p_min, rte=rte, life=life, elec=elec,
+                    scale=SS["cfg_scale"], weights=weights, charge_hours_target=pre["charge_hours_target"])
+t = make_targets(SETTINGS_NOW)
 E_KWH = power * hours
 
 
@@ -649,6 +658,22 @@ def live_progress(mode: str, kp: str):
         st.rerun(scope="app")            # progress chart clicked during a panel refresh
 
 
+def pin_button(kind: str, ids: list):
+    """Add or remove this candidate from the interesting-candidates list."""
+    item = [kind, *ids]
+    wl = list(SS.get("watchlist") or [])
+    if item in wl:
+        if st.button("Remove from interesting candidates", key=f"unwatch_{kind}"):
+            SS["watchlist"] = [x for x in wl if x != item]
+            st.rerun()
+        st.caption("In the ⭐ Interesting candidates tab, recalculated whenever you change a setting.")
+    elif st.button("⭐ Add to interesting candidates", key=f"watch_{kind}", type="primary",
+                   help="Puts it in the ⭐ Interesting candidates tab, where all of them are recalculated and "
+                        "compared every time you change a setting on the left."):
+        SS["watchlist"] = wl + [item]
+        st.rerun()
+
+
 @st.dialog("Candidate detail", width="large")
 def couple_dialog(name: str):
     st.session_state["selected_couple"] = name
@@ -656,11 +681,13 @@ def couple_dialog(name: str):
     if d is None or d.best is None:
         st.info("This couple was not sized.")
     else:
+        pin_button("couple", [name])
         render_couple(d, "dlg")
 
 
 @st.dialog("Molecule detail", width="large")
 def molecule_dialog(smiles: str):
+    pin_button("molecule", [smiles])
     render_molecule(smiles, "mdlg")
 
 
@@ -671,6 +698,7 @@ def pair_dialog(neg: str, pos: str):
     if pr is None:
         st.info("Pair no longer available.")
     else:
+        pin_button("pair", [neg, pos, pr.kn, pr.kp])
         render_pair(pr, "pdlg")
 
 
@@ -678,7 +706,7 @@ st.title("Hydrogen battery simulator")
 st.caption("Candidates come from thermodynamic data and physical laws; every result is compared with the "
            "lithium-ion packs in current cars (Tesla NMC/NCA, BYD Blade LFP).")
 
-TAB_NAMES = ["Best candidates", "Trade-offs", "Candidate detail", "Storage and recharge options",
+TAB_NAMES = ["⭐ Interesting candidates", "Best candidates", "Trade-offs", "Candidate detail", "Storage and recharge options",
              "AI molecule discovery", "Two-molecule batteries (no gas)", "Li-ion reference and validation"]
 if SS.get("cfg_tab") not in TAB_NAMES:
     SS["cfg_tab"] = TAB_NAMES[0]
@@ -693,9 +721,159 @@ with st.spinner(f"Sizing {len(names) + len(extra)} systems at every pressure..."
     designs = size(tkey(t), names, extra)
 df = design_rows(designs).sort_values("LCOS USD/kWh") if designs else pd.DataFrame()
 
-# ------------------------------------------------------------------ tab 1
+
+# ------------------------------------------------------------------ pinned candidate
+
+SWEEPS = {   # setting -> (label, values around the current one)
+    "p_max": ("Highest hydrogen pressure, bar", lambda v: [10, 20, 30, 45, 60, 100, 150, 200]),
+    "power": ("Power, kW", lambda v: [v * f for f in (0.25, 0.5, 1, 2, 4)]),
+    "hours": ("Delivers full power for, hours", lambda v: [v * f for f in (0.25, 0.5, 1, 2, 4, 8)]),
+    "rte": ("Round-trip efficiency it must keep", lambda v: [0.55, 0.65, 0.75, 0.85, 0.9]),
+    "life": ("Lifetime, years", lambda v: [5, 10, 15, 20, 30]),
+    "elec": ("Charging electricity, USD/kWh", lambda v: [0.02, 0.05, 0.1, 0.2]),
+    "scale": ("Built as", lambda v: list(stackcost.SCALES)),
+}
+
+
+def evaluate_pinned(pin: list, tt: dict) -> dict | None:
+    """Key results of the pinned candidate for these model inputs."""
+    kind, rng = pin[0], np.random.default_rng(5)
+    e = tt["design"]["power_kw"] * tt["design"]["hours"]
+    if kind == "couple":
+        cell = next((c for c in discover.table_pairs() if c.name == pin[1]), None)
+        b = design.design(cell, tt, rng).best if cell else None
+        if b is None:
+            return None
+        return {"build USD/kWh": b.capex_usd_kwh, "lifetime cost USD/kWh": b.lcos_usd_kwh,
+                "Wh/kg": e * 1000 / b.mass_kg, "Wh/L": e * 1000 / b.volume_l, "efficiency": b.rte,
+                "pressure bar": b.p_max_bar}
+    store = ai_search.load_store()
+    if kind == "molecule":
+        r = store.get(pin[1]) or M.evaluate(pin[1])
+        cfgs = options.configurations(M.as_cell(r), tt, rng) if math.isfinite(r.e0) else []
+        c = min(cfgs, key=lambda x: x.lcos_usd_kwh) if cfgs else None
+    else:
+        n, p_ = store.get(pin[1]), store.get(pin[2])
+        c = options.pair_configuration(pairs.make_pair(n, p_, int(pin[3]), int(pin[4])), tt, rng) if n and p_ else None
+    if c is None:
+        return None
+    return {"build USD/kWh": c.capex_usd_kwh, "lifetime cost USD/kWh": c.lcos_usd_kwh,
+            "Wh/kg": c.wh_kg, "Wh/L": c.wh_l, "efficiency": c.rte}
+
+
+@st.cache_data(show_spinner=False)
+def pinned_now(pin_json: str, targets_repr: str):
+    return evaluate_pinned(json.loads(pin_json), json.loads(targets_repr))
+
+
+@st.cache_data(show_spinner=False)
+def pinned_sweep(pin_json: str, settings_json: str, key: str, version: int = MODEL_VERSION):
+    pin, s = json.loads(pin_json), json.loads(settings_json)
+    rows = []
+    for v in sorted(set(SWEEPS[key][1](s[key])) | {s[key]}, key=str if key == "scale" else float):
+        if key == "p_max" and v <= s["p_min"]:
+            continue
+        res = evaluate_pinned(pin, make_targets({**s, key: v}))
+        if res:
+            rows.append({"value": stackcost.SCALES[v] if key == "scale" else v, "now": v == s[key], **res})
+    return pd.DataFrame(rows)
+
+
+def short_label(pin: list) -> str:
+    if pin[0] == "couple":
+        return pin[1]
+    if pin[0] == "molecule":
+        return pin[1] if len(pin[1]) <= 28 else pin[1][:26] + "…"
+    cut = lambda x: x if len(x) <= 16 else x[:14] + "…"
+    return f"{cut(pin[1])} | {cut(pin[2])}"
+
+
+def show_details(pin: list, kp: str):
+    if pin[0] == "couple":
+        d_ = size(tkey(t), (pin[1],), ())
+        if d_ and d_[0].best:
+            render_couple(d_[0], kp)
+    elif pin[0] == "molecule":
+        render_molecule(pin[1], kp)
+    else:
+        store_ = ai_search.load_store()
+        n_, p_ = store_.get(pin[1]), store_.get(pin[2])
+        if n_ and p_:
+            render_pair(pairs.make_pair(n_, p_, int(pin[3]), int(pin[4])), kp)
+        else:
+            st.info("Its molecules are no longer in the library.")
+
+
+def watch_tab():
+    wl = [x for x in (SS.get("watchlist") or []) if x]
+    if not wl:
+        st.info("No interesting candidates yet. Open any candidate, molecule or pair (click it in a table or "
+                "chart) and press '⭐ Add to interesting candidates'. They are then compared here and "
+                "recalculated every time you change a setting on the left.")
+        return
+    st.caption(f"Recalculated with your settings: {power:g} kW for {hours:g} h ({E_KWH:,.0f} kWh), up to "
+               f"{p_max} bar, efficiency target {rte:.2f}, {stackcost.SCALES[SS['cfg_scale']]}.")
+    fmt = {"build USD/kWh": "{:,.0f}", "lifetime cost USD/kWh": "{:,.3f}", "Wh/kg": "{:,.1f}",
+           "Wh/L": "{:,.1f}", "efficiency": "{:.2f}", "pressure bar": "{:g}"}
+    rows = []
+    with st.spinner(f"Recalculating {len(wl)} candidates..."):
+        for pin in wl:
+            now = pinned_now(json.dumps(pin), tkey(t))
+            row = {"candidate": short_label(pin), "kind": {"couple": "table couple", "molecule": "molecule vs H2",
+                                                         "pair": "two molecules"}[pin[0]]}
+            row.update({k: fmt[k].format(v) for k, v in now.items()} if now else {"build USD/kWh": "cannot be built"})
+            rows.append(row)
+    st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+    st.caption(f"Li-ion pack for comparison: about {LI['usd_kwh_stationary']:.0f} USD/kWh, {LI['wh_kg']:.0f} Wh/kg, "
+               f"{LI['wh_l']:.0f} Wh/L.")
+
+    keys = list(SWEEPS)
+    default("pin_sweep", "p_max")
+    key = st.selectbox("How one setting changes them", keys, format_func=lambda k: SWEEPS[k][0], key="pin_sweep")
+    if key == "p_max" and any(p[0] == "pair" for p in wl):
+        st.caption("Two-molecule batteries hold no gas, so pressure does not change them (flat lines).")
+    metrics_ = ["build USD/kWh", "lifetime cost USD/kWh", "Wh/kg", "efficiency"]
+    fig = make_subplots(rows=1, cols=4, subplot_titles=metrics_)
+    sj = json.dumps(SETTINGS_NOW, sort_keys=True)
+    palette = px.colors.qualitative.Plotly
+    with st.spinner(f"Recalculating at several values of '{SWEEPS[key][0]}' (first time only)..."):
+        for j, pin in enumerate(wl):
+            sw = pinned_sweep(json.dumps(pin), sj, key)
+            if sw.empty:
+                continue
+            for i_, m_ in enumerate(metrics_):
+                fig.add_trace(go.Scatter(x=sw["value"], y=sw[m_], mode="lines+markers", name=short_label(pin),
+                                         legendgroup=str(j), showlegend=i_ == 0,
+                                         line=dict(color=palette[j % len(palette)]),
+                                         marker=dict(size=[13 if x else 6 for x in sw["now"]],
+                                                     symbol=["star" if x else "circle" for x in sw["now"]])),
+                              row=1, col=i_ + 1)
+    if key in ("power", "hours", "p_max"):
+        fig.update_xaxes(type="log")
+    fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10),
+                      title=f"x axis: {SWEEPS[key][0]} (star = your current setting)",
+                      legend=dict(orientation="h", y=-0.2))
+    st.plotly_chart(fig, width="stretch", key="watch_sweep_chart")
+
+    c1, c2, c3 = st.columns([4, 1, 1])
+    pick = c1.selectbox("Details of", range(len(wl)), format_func=lambda i: short_label(wl[i]), key="watch_pick")
+    if c2.button("Remove", key="watch_remove"):
+        SS["watchlist"] = [x for k, x in enumerate(wl) if k != pick]
+        st.rerun()
+    if c3.button("Clear all", key="watch_clear"):
+        SS["watchlist"] = []
+        st.rerun()
+    with st.expander(f"Full details of {short_label(wl[pick])}, recalculated with your settings", expanded=False):
+        show_details(wl[pick], "watch")
+
+
 
 with tabs[0]:
+    watch_tab()
+
+# ------------------------------------------------------------------ tab 1
+
+with tabs[1]:
     st.subheader(f"{len(results)} couples screened; {len(df)} sized for {power:g} kW x {hours:g} h")
     if not df.empty:
         st.markdown("#### Did we find something better than today's lithium-ion? (best sealed hydrogen design per figure)")
@@ -721,7 +899,7 @@ with tabs[0]:
 
 # ------------------------------------------------------------------ tab 2
 
-with tabs[1]:
+with tabs[2]:
     pts = []
     for d in designs:
         for p in d.points:
@@ -759,7 +937,7 @@ with tabs[1]:
 
 # ------------------------------------------------------------------ tab 3
 
-with tabs[2]:
+with tabs[3]:
     if designs:
         names = [d.cell.name for d in designs if d.best]
         last = st.session_state.get("selected_couple")
@@ -787,7 +965,7 @@ def option_table(targets_json: str, name: str | None, smiles: tuple[str, ...]):
     return cfgs
 
 
-with tabs[3]:
+with tabs[4]:
     st.write("Every way to store the hydrogen and to recharge, sized for the same job "
              f"({power:g} kW for {hours:g} h) and compared with lithium-ion car packs.")
     st.markdown("- **electric**: sealed, recharged with electricity only; the gas never leaves.\n"
@@ -823,7 +1001,7 @@ with tabs[3]:
 
 # ------------------------------------------------------------------ tab 5
 
-with tabs[4]:
+with tabs[5]:
     st.write("A genetic algorithm writes new molecules (SELFIES mutations and crossovers); a machine-learning "
              "model predicts which are worth computing; GFN2-xTB quantum chemistry computes their voltage with "
              "hydrogen; the model learns from every result. Molecules not in PubChem have never been reported.")
@@ -891,7 +1069,7 @@ with tabs[4]:
 
 # ------------------------------------------------------------------ tab 6: two molecules
 
-with tabs[5]:
+with tabs[6]:
     st.write("Hydrogen moves between two molecules as protons and electrons and is never a gas: "
              "no pressure, no tank, no platinum, a water-based liquid that cannot burn. "
              "Negative: N-H2 -> N + 2H+ + 2e-; positive: P + 2H+ + 2e- -> P-H2; voltage = E(P) - E(N), "
@@ -901,7 +1079,7 @@ with tabs[5]:
         anim_mode = st.radio("Show", ["discharge", "charge"], horizontal=True, key="anim_mode",
                              format_func=lambda m: {"discharge": "Discharging (gives power)",
                                                     "charge": "Charging (stores power)"}[m])
-        components.html(animation.two_tank_html(anim_mode, height=520), height=520)
+        st.iframe(animation.two_tank_html(anim_mode, height=520), height=520)
     q1, q2, q3, q4 = st.columns(4)
     default("pair_gens", 5)
     pg = q1.number_input("Generations", 1, 200, key="pair_gens", help='How many rounds of evolution to run. In each round the AI writes several hundred new molecules by mutating and crossing the best ones found so far, predicts which are promising, and computes the best few with quantum chemistry. More rounds = more molecules explored and usually better results; time grows in proportion.')
@@ -970,7 +1148,7 @@ with tabs[5]:
 
 # ------------------------------------------------------------------ tab 7
 
-with tabs[6]:
+with tabs[7]:
     st.subheader("Lithium-ion batteries in current cars (liquid electrolyte, not solid-state)")
     st.dataframe(pd.DataFrame([{"battery": b["name"], "level": b["level"],
                                 "Wh/kg": "-".join(f"{x:g}" for x in b.get("wh_kg", [])),
