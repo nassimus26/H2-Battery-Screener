@@ -571,10 +571,20 @@ def open_pending_dialog():
         gas_cell_dialog(v[0])
 
 
+def dft_store() -> dict:
+    """The molecule library as the page shows it: a molecule whose first hydrogen
+    uptake was verified with DFT uses that voltage (M.with_dft); the AI search
+    itself keeps working on xTB voltages so it compares like with like."""
+    return {s_: M.with_dft(r_) for s_, r_ in ai_search.load_store().items()}
+
+
 @st.cache_data(show_spinner=False)
-def molecule_options(targets_json: str, smiles: str):
+def molecule_options(targets_json: str, smiles: str, level: str = "dft", dft_v: float | None = None):
+    """Every build option of a molecule; level 'xtb' gives the search's own numbers (before DFT).
+    dft_v is part of the cache key, so a DFT result that arrives later is picked up."""
     tt = json.loads(targets_json)
     r = ai_search.load_store().get(smiles) or M.evaluate(smiles)
+    r = M.xtb_version(r) if level == "xtb" else M.with_dft(r, dft_v)
     return options.configurations(M.as_cell(r), tt, np.random.default_rng(11)) if math.isfinite(r.e0) else []
 
 
@@ -623,7 +633,7 @@ def molecule_known(smiles: str) -> bool | None:
     """True: a known compound (measured data, or found in PubChem); False: never reported; None: not checked."""
     if smiles in gases.MEASURED or smiles in ("O", "[H][H]"):
         return True
-    st_ = ai_search.load_store().get(smiles)
+    st_ = dft_store().get(smiles)
     if st_ is not None and st_.in_pubchem is not None:
         return st_.in_pubchem
     try:
@@ -827,10 +837,11 @@ def dft_check(r, kp: str):
     if not red:
         return
     v = _A.hydrogenation_voltage(r.smiles, red, 1, "dft", compute=False)
-    x = (r.steps or [r.e0])[0]
+    x = (r.xtb_steps or r.steps or [r.e0])[0]
     if v is not None:
         st.caption(f"🔬 **First-principles check** ({_A.LEVELS['dft']}, no reference couple): first H2 at "
-                   f"**{v:.2f} V** vs {x:.2f} V from the fast xTB search (difference {v - x:+.2f} V).")
+                   f"**{v:.2f} V** vs {x:.2f} V from the fast xTB search (difference {v - x:+.2f} V). "
+                   "The numbers on this page use the DFT voltage.")
     elif st.button("🔬 Verify with DFT (10-30 min, in the background)", key=f"{kp}_dft"):
         launch_verify([r.smiles])
         st.toast("DFT started in the background: reopen this molecule later to see the result.")
@@ -860,8 +871,71 @@ def stability_table(r):
         st.caption("Computed by '🔬 Verify with DFT' (with the voltage check).")
 
 
+def _ba_row(name, before, after, fmt, unit=""):
+    if before is None or after is None:
+        return {"": name, "xTB (before)": "-" if before is None else fmt.format(before) + unit,
+                "DFT (after)": "-" if after is None else fmt.format(after) + unit, "change": ""}
+    ch = after - before
+    rel = f" ({ch / before:+.0%})" if before not in (0, None) and abs(before) > 1e-9 and unit != " V" else ""
+    return {"": name, "xTB (before)": fmt.format(before) + unit, "DFT (after)": fmt.format(after) + unit,
+            "change": (fmt.format(ch) if ch < 0 else "+" + fmt.format(ch)) + unit + rel}
+
+
+def _best(cfgs):
+    return min(cfgs, key=lambda x: x.lcos_usd_kwh) if cfgs else None
+
+
+def dft_before_after(r, cfgs_dft, kp: str):
+    """Every number of a molecule from the fast xTB search next to the same number with the DFT voltage."""
+    x = M.xtb_version(r)
+    bx, bd = _best(molecule_options(tkey(t), r.smiles, "xtb")), _best(cfgs_dft)
+    rows = [_ba_row("first H2 voltage (V vs SHE)", x.steps[0], r.steps[0], "{:.2f}", " V"),
+            _ba_row("voltage used (mean of the steps)", sum(x.steps[:x.best_k]) / x.best_k,
+                    sum(r.steps[:r.best_k]) / r.best_k, "{:.2f}", " V"),
+            _ba_row("energy per litre of liquid", x.wh_l, r.wh_l, "{:.1f}", " Wh/L"),
+            _ba_row("energy per kg of molecule", x.wh_kg, r.wh_kg, "{:.0f}", " Wh/kg"),
+            _ba_row("search score", x.objective, r.objective, "{:.1f}")]
+    if bx and bd:
+        rows += [_ba_row("battery: build cost", bx.capex_usd_kwh, bd.capex_usd_kwh, "{:,.0f}", " USD/kWh"),
+                 _ba_row("battery: efficiency", bx.rte, bd.rte, "{:.2f}"),
+                 _ba_row("battery: lifetime cost", bx.lcos_usd_kwh, bd.lcos_usd_kwh, "{:.3f}", " USD/kWh"),
+                 _ba_row("battery: energy per kg", bx.wh_kg, bd.wh_kg, "{:.1f}", " Wh/kg")]
+    with st.expander(f"🔬 DFT-checked: every number before and after (first H2 {x.steps[0]:.2f} → {r.steps[0]:.2f} V)",
+                     expanded=True):
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+        st.caption("All numbers on this page use the DFT voltage. DFT is computed for the first hydrogen uptake "
+                   "only" + (f"; uptakes 2-{len(r.steps)} still use xTB." if len(r.steps) > 1 else ".")
+                   + " The AI search keeps ranking on xTB voltages.")
+
+
+def pair_before_after(pr, cfg_dft, kp: str):
+    """A pair's numbers with the xTB voltages of both molecules next to the DFT-checked ones."""
+    nx, px_ = M.xtb_version(pr.neg), M.xtb_version(pr.pos)
+    try:
+        prx = pairs.make_pair(nx, px_, pr.kn, pr.kp)
+    except KeyError:
+        return
+    cfx = pair_cfg(f"{nx.smiles}|{px_.smiles}|{pr.kn}|{pr.kp}|{prx.voltage:.4f}", tkey(t), prx)
+    rows = [_ba_row("negative: first H2 voltage", nx.steps[0], pr.neg.steps[0], "{:.2f}", " V"),
+            _ba_row("positive: first H2 voltage", px_.steps[0], pr.pos.steps[0], "{:.2f}", " V"),
+            _ba_row("cell voltage", prx.voltage, pr.voltage, "{:.2f}", " V"),
+            _ba_row("energy per litre of both liquids", prx.wh_l, pr.wh_l, "{:.1f}", " Wh/L"),
+            _ba_row("pair score", prx.score, pr.score, "{:.1f}")]
+    if cfx and cfg_dft:
+        rows += [_ba_row("battery: build cost", cfx.capex_usd_kwh, cfg_dft.capex_usd_kwh, "{:,.0f}", " USD/kWh"),
+                 _ba_row("battery: efficiency", cfx.rte, cfg_dft.rte, "{:.2f}"),
+                 _ba_row("battery: energy per kg", cfx.wh_kg, cfg_dft.wh_kg, "{:.1f}", " Wh/kg")]
+    which = [n for n, m in (("negative", pr.neg), ("positive", pr.pos)) if m.xtb_steps]
+    missing = [n for n, m in (("negative", pr.neg), ("positive", pr.pos)) if not m.xtb_steps]
+    with st.expander("🔬 DFT-checked: before and after (" + " and ".join(which) + " molecule)", expanded=True):
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+        if missing:
+            st.caption(f"Only the {which[0]} molecule has a DFT voltage; the {missing[0]} still uses xTB. "
+                       f"Open the {missing[0]} molecule and press 'Verify with DFT' for a fully checked pair.")
+
+
 def render_molecule(smiles: str, kp: str, pin: bool = False):
-    r = ai_search.load_store().get(smiles) or next((x for x in view_pool("mol") + view_pool("pair")
+    r = dft_store().get(smiles) or next((x for x in view_pool("mol") + view_pool("pair")
                                                     if x.smiles == smiles), None) or M.evaluate(smiles)
     steps = r.steps or [r.e0]
     sc = synthesis.estimate(r.smiles, t["synthesis"])
@@ -890,7 +964,10 @@ def render_molecule(smiles: str, kp: str, pin: bool = False):
             pin_button("molecule", [r.smiles], kp)
     if r.notes:
         st.warning("; ".join(r.notes))
-    cfgs = molecule_options(tkey(t), r.smiles)
+    dft_v = r.steps[0] if r.xtb_steps else None
+    cfgs = molecule_options(tkey(t), r.smiles, "dft", dft_v)
+    if r.xtb_steps:
+        dft_before_after(r, cfgs, kp)
     tb = st.tabs(["⚡ vs lithium-ion", "💰 Cost breakdown", "🔧 Build options", "🧪 Chemistry"])
     with tb[3]:
         a_, b_ = st.columns([3, 2])
@@ -911,7 +988,7 @@ def render_molecule(smiles: str, kp: str, pin: bool = False):
                    "Build options.")
 
         def at_(sc_, sm=r.smiles):
-            cf_ = molecule_options(tkey(targets_at(sc_)), sm)
+            cf_ = molecule_options(tkey(targets_at(sc_)), sm, "dft", dft_v)
             return min(cf_, key=lambda x: x.lcos_usd_kwh) if cf_ else None
         li_metrics(best, kp, at=at_, kind="molecule", ids=[r.smiles], name=r.smiles)
     with tb[1]:
@@ -946,13 +1023,16 @@ def render_pair(pr, kp: str):
     c[5].metric("Positive costs", f"${sp_.usd_kg:,.0f}/kg",
                 help=f"Estimated price to make the positive molecule: {sp_.describe()}.")
     st.caption("; ".join(pr.notes + pr.neg.notes + pr.pos.notes))
-    cfg = pair_cfg(f"{pr.neg.smiles}|{pr.pos.smiles}|{pr.kn}|{pr.kp}", tkey(t), pr)
+    pkey = f"{pr.neg.smiles}|{pr.pos.smiles}|{pr.kn}|{pr.kp}|{pr.voltage:.4f}"
+    cfg = pair_cfg(pkey, tkey(t), pr)
+    if pr.neg.xtb_steps or pr.pos.xtb_steps:
+        pair_before_after(pr, cfg, kp)
     st.markdown("**Built as a full battery, vs lithium-ion**")
     if cfg is None:
         st.info("Cannot be charged inside the water window.")
     else:
         li_metrics(cfg, kp, kind="pair", ids=[pr.neg.smiles, pr.pos.smiles], name=f"{pr.neg.smiles} {pr.pos.smiles}",
-                   at=lambda sc: pair_cfg(f"{pr.neg.smiles}|{pr.pos.smiles}|{pr.kn}|{pr.kp}", tkey(targets_at(sc)), pr))
+                   at=lambda sc: pair_cfg(pkey, tkey(targets_at(sc)), pr))
         show_cost(cfg.cost_parts, {"i_a_cm2": cfg.i_a_cm2, "area_m2": cfg.area_m2, "v_dis": cfg.v_dis,
                                    "chem_kg_per_kwh": pairs.kg_per_kwh(pr.neg.mw, pr.voltage, 2 * pr.kn)
                                    + pairs.kg_per_kwh(pr.pos.mw, pr.voltage, 2 * pr.kp), "synth": cfg.synth,
@@ -1060,7 +1140,7 @@ def view_pool(kp: str) -> list:
             out = []
             for d_ in rec.get("molecules", []):
                 try:
-                    out.append(M.MolResult(**d_))
+                    out.append(M.with_dft(M.MolResult(**d_)))
                 except TypeError:
                     continue
             return out
@@ -1074,10 +1154,10 @@ def library_snapshot() -> list:
     ctls = search_controls().values()
     if not any(c.thread is not None and c.thread.is_alive() for c in ctls):
         SS.pop("snap_sig", None)
-        return list(ai_search.load_store().values())
+        return list(dft_store().values())
     sig = tuple(len(c.history) for c in ctls)
     if SS.get("snap_sig") != sig or "snap_pool" not in SS:
-        SS["snap_pool"] = list(ai_search.load_store().values())
+        SS["snap_pool"] = list(dft_store().values())
         SS["snap_sig"] = sig
     return SS["snap_pool"]
 
@@ -1157,7 +1237,7 @@ def live_progress(mode: str, kp: str):
         gy = [ctl.history[i]["best"] for i in keep]
         f = go.Figure()
         # every molecule computed in each generation (grey), then the best so far (blue)
-        pool_ = {r.smiles: r for r in ai_search.load_store().values()}
+        pool_ = {r.smiles: r for r in dft_store().values()}
         if mode == "pair":
             val = {}
             for p_ in pairs.best_pairs(list(pool_.values()), 2000):
@@ -1349,7 +1429,7 @@ def _evaluate_pinned(pin: list, tt: dict) -> dict | None:
             return None
         return {"build USD/kWh": cf.capex_usd_kwh, "lifetime cost USD/kWh": cf.lcos_usd_kwh,
                 "Wh/kg": cf.wh_kg, "Wh/L": cf.wh_l, "efficiency": cf.rte}
-    store = ai_search.load_store()
+    store = dft_store()
     if kind == "molecule":
         r = store.get(pin[1]) or M.evaluate(pin[1])
         cfgs = options.configurations(M.as_cell(r), tt, rng) if math.isfinite(r.e0) else []
@@ -1409,7 +1489,7 @@ def show_details(pin: list, kp: str):
     elif pin[0] == "molecule":
         render_molecule(pin[1], kp)
     else:
-        store_ = ai_search.load_store()
+        store_ = dft_store()
         n_, p_ = store_.get(pin[1]), store_.get(pin[2])
         if n_ and p_:
             render_pair(pairs.make_pair(n_, p_, int(pin[3]), int(pin[4])), kp)
@@ -1424,7 +1504,7 @@ def candidate_choices(src: str) -> list:
     if src == "couple":
         return [["couple", d.cell.name] for d in designs if d.best]
     if src == "molecule":
-        st_ = [r for r in ai_search.load_store().values() if math.isfinite(r.e0)]
+        st_ = [r for r in dft_store().values() if math.isfinite(r.e0)]
         return [["molecule", r.smiles] for r in sorted(st_, key=lambda r: -r.objective)[:60]]
     if src == "pair":
         return [["pair", p.neg.smiles, p.pos.smiles, p.kn, p.kp]
@@ -2284,7 +2364,7 @@ def latest_finds(k: int = 30) -> tuple[tuple, tuple]:
     """Candidates for 'just found': the k best (by the search's own score; zero-score molecules never) computed by
     the newest molecule search and by the newest pair search, and the k best of the 30 newest larger gas
     molecules. tradeoff_points sizes them as whole batteries and keeps the most promising few."""
-    store = ai_search.load_store()
+    store = dft_store()
     mols = []
     for mode in ("positive", "pair"):
         rr = [r for r in runs.list_runs(mode) if r.get("molecules")]
@@ -2334,7 +2414,7 @@ def tradeoff_points(targets_json: str, n_mol: int, n_gas_e: int, n_gas_s: int, n
             rows.append(_row("table couple (H2 + inorganic)", d.cell.name, "couple", [d.cell.name],
                              e * 1000 / b.mass_kg, e * 1000 / b.volume_l, b.capex_usd_kwh, b.lcos_usd_kwh, b.rte,
                              f"{b.p_max_bar:g} bar, burst {b.safety.burst_tnt_kg:.2f} kg TNT"))
-    store = [r for r in ai_search.load_store().values() if math.isfinite(r.e0)]
+    store = [r for r in dft_store().values() if math.isfinite(r.e0)]
     rng = np.random.default_rng(11)
     by_s = {r.smiles: r for r in store}
     top_m = sorted((r for r in store if not pairs._unstable(r.smiles)), key=lambda r: -r.objective)[:15]

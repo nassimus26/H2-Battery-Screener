@@ -143,3 +143,15 @@ def test_cost_range_text():
     assert "$2,400" in h
     assert cost_range(500.0, (), 70.0)[1] == "+430 vs Li-ion"
     assert "cannot be built" in cost_range(500.0, (400.0, 600.0, math.inf), 70.0)[1]
+
+
+def test_dft_voltage_replaces_the_first_step_and_rescores():
+    r = M.MolResult("O=C1C=CC(=O)C=C1", "Oc1ccc(O)cc1", 0.0, 0.70, steps=[0.70], forms=["Oc1ccc(O)cc1"])
+    r.mw, r.solubility_mol_l, r.sa = 108.1, 1.0, 2.0
+    M.score(r, M.descriptors(r.smiles))
+    d = M.with_dft(r, 0.60)
+    assert d.steps[0] == 0.60 and d.e0 == 0.60 and d.xtb_steps == [0.70]
+    assert d.wh_l < r.wh_l                      # lower voltage, less energy
+    back = M.xtb_version(d)
+    assert back.steps == [0.70] and back.wh_l == pytest.approx(r.wh_l) and not back.xtb_steps
+    assert M.with_dft(d, 0.5) is d              # never applied twice

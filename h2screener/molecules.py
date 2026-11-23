@@ -158,6 +158,7 @@ class MolResult:
     steps: list[float] = field(default_factory=list)   # calibrated E of each successive H2 uptake, V vs SHE
     forms: list[str] = field(default_factory=list)     # molecule after each uptake (forms[0] = reduced)
     best_k: int = 1                                     # H2 per molecule used by the best single-molecule cell
+    xtb_steps: list[float] = field(default_factory=list)  # the xTB steps, kept when a DFT voltage replaced step 1
 
 
 def canonical(smiles: str) -> str | None:
@@ -523,6 +524,20 @@ def evaluate(smiles: str, check_pubchem: bool = False, max_h2: int = MAX_H2) -> 
             r.notes += n2
         except Exception as e:
             r.notes.append(f"xTB failed on further uptake: {e}")
+    if d["aldehyde"]:
+        r.notes.append("aldehyde group: hydrates in water (gem-diol)")
+    if d["reactive"]:
+        r.notes.append("reactive group (peroxide, anhydride, acyl cyanide, azide, ...): not stable in water")
+    if d["unstable"]:
+        r.notes.append("reactive group: unstable (" + ", ".join(d["unstable"]) + ")")
+    score(r, d)
+    if check_pubchem:
+        r.in_pubchem = in_pubchem(s)
+    return r
+
+
+def score(r: MolResult, d: dict) -> None:
+    """Energy and search score of a molecule from its step voltages (r.steps)."""
     k, whl, e_mean = multi_objective(r.steps, d)
     r.best_k = k
     r.wh_l = whl if whl > 0 else r.e0 * 2 * F * min(r.solubility_mol_l, 4.0) / 3600
@@ -534,17 +549,53 @@ def evaluate(smiles: str, check_pubchem: bool = False, max_h2: int = MAX_H2) -> 
     if any("oxidised form tautomerises" in n for n in r.notes):
         r.objective *= 0.3
     if d["aldehyde"]:
-        r.notes.append("aldehyde group: hydrates in water (gem-diol)")
         r.objective *= 0.5
-    if d["reactive"]:
-        r.notes.append("reactive group (peroxide, anhydride, acyl cyanide, azide, ...): not stable in water")
+    if d["reactive"] or d["unstable"]:
         r.objective = 0.0
-    if d["unstable"]:
-        r.notes.append("reactive group: unstable (" + ", ".join(d["unstable"]) + ")")
-        r.objective = 0.0
-    if check_pubchem:
-        r.in_pubchem = in_pubchem(s)
-    return r
+
+
+@lru_cache(maxsize=20000)
+def _descriptors_cached(smiles: str) -> dict:
+    return descriptors(smiles)
+
+
+def dft_voltage(r: MolResult) -> float | None:
+    """First-principles (DFT) voltage of the first H2 uptake, if it was computed
+    ('Verify with DFT'); None otherwise. Never starts a calculation."""
+    red = r.forms[0] if r.forms else r.reduced
+    if not red or not math.isfinite(r.e0):
+        return None
+    try:
+        from . import abinitio
+        return abinitio.hydrogenation_voltage(r.smiles, red, 1, "dft", compute=False)
+    except Exception:
+        return None
+
+
+def with_dft(r: MolResult, v: float | None = None) -> MolResult:
+    """The molecule with its first step voltage from DFT when one was computed,
+    everything else re-scored with the same formulas. Further steps stay xTB
+    (DFT is computed for the first uptake only). The xTB steps are kept in
+    xtb_steps, so xtb_version() gives the molecule as the search saw it."""
+    v = dft_voltage(r) if v is None else v
+    if v is None or r.xtb_steps:
+        return r
+    from dataclasses import replace
+    n = replace(r, notes=list(r.notes), forms=list(r.forms), xtb_steps=list(r.steps or [r.e0]))
+    n.steps = [v] + list(r.steps[1:])
+    n.e0 = v
+    score(n, _descriptors_cached(r.smiles))
+    return n
+
+
+def xtb_version(r: MolResult) -> MolResult:
+    if not r.xtb_steps:
+        return r
+    from dataclasses import replace
+    n = replace(r, notes=list(r.notes), forms=list(r.forms), steps=list(r.xtb_steps), xtb_steps=[])
+    n.e0 = n.steps[0]
+    score(n, _descriptors_cached(r.smiles))
+    return n
 
 
 def as_cell(r: MolResult) -> CellReaction:
@@ -559,6 +610,8 @@ def as_cell(r: MolResult) -> CellReaction:
     red = Species(f_red, 0, "aq", red_smiles)
     c = CellReaction(None, None, {ox: 1, Species("H2", 0, "g", "H2(g)"): k}, {red: 1}, 2 * k, e_mean, "acid",
                      origin="xtb-molecule",
-                     source=f"GFN2-xTB/ALPB(water), one offset fitted on half of the known quinones; +/-{VOLTAGE_BAND} V")
+                     source=("first step from DFT (wB97X-V/def2-TZVP//GFN2-xTB, no reference couple), further steps "
+                             "GFN2-xTB" if r.xtb_steps else
+                             f"GFN2-xTB/ALPB(water), one offset fitted on half of the known quinones; +/-{VOLTAGE_BAND} V"))
     c.solubility_mol_l = r.solubility_mol_l
     return c
