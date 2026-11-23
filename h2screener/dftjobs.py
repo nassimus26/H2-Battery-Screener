@@ -28,6 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JOBS = ROOT / "cache" / "dft_jobs"
 SCRIPTS = ("verify_molecules.py", "compute_gas_fp.py")
+DEFAULT_CALC_S = 20 * 60      # one DFT calculation of a ~20-atom molecule before any has been timed here
 
 
 def _path(job_id: str) -> Path:
@@ -97,8 +98,18 @@ def eta_seconds(rec: dict) -> float | None:
     elapsed = time.time() - rec["started"]
     if done:
         return max(0.0, elapsed / done * (total - done))
+    # nothing finished yet: the calculations run 'workers' at a time, each taking about
+    # typical x workers (typical = time between two finishes), or DEFAULT_CALC_S without history
+    workers = max(1, int(rec.get("workers") or 1))
     t = typical_seconds()
-    return max(0.0, t * total - elapsed) if t else None
+    per_calc = t * workers if t else DEFAULT_CALC_S
+    waves = -(-total // workers)
+    return max(0.1 * per_calc, per_calc * waves - elapsed)   # past the estimate: keep a little left
+
+
+def eta_is_rough(rec: dict) -> bool:
+    """True while the time left is only the default guess (no calculation finished here or before)."""
+    return not rec.get("done") and typical_seconds() is None
 
 
 def list_jobs(limit: int = 20) -> list[dict]:
@@ -121,15 +132,76 @@ def untracked_processes() -> list[dict]:
         return []
     found = []
     for line in out.splitlines():
-        if not any(s in line for s in SCRIPTS) or "--job" in line:
-            continue
         parts = line.split()
-        pid = parts[0]
-        if pid in tracked:
+        if len(parts) < 8 or "--job" in parts:
             continue
-        started = " ".join(parts[1:6])
-        cmd = " ".join(parts[6:])
-        script = next(s for s in SCRIPTS if s in cmd)
-        args = cmd.split(script, 1)[1].strip()
-        found.append({"pid": int(pid), "script": script, "args": args, "started": started})
+        pid, started, cmd = parts[0], " ".join(parts[1:6]), parts[6:]
+        # the script must be what the process runs (an argument right after the interpreter),
+        # not just a name mentioned inside some other command's text
+        hit = next(((i, s) for i, tok in enumerate(cmd[:3]) for s in SCRIPTS
+                    if tok == s or tok.endswith("/" + s)), None)
+        if hit is None or pid in tracked or "python" not in cmd[0]:
+            continue
+        i, script = hit
+        found.append({"pid": int(pid), "script": script, "args": " ".join(cmd[i + 1:]), "started": started})
     return found
+
+
+def _canon(s: str) -> str:
+    try:
+        from rdkit import Chem
+        m = Chem.MolFromSmiles(s)
+        return Chem.MolToSmiles(m) if m is not None else s
+    except Exception:
+        return s
+
+
+def running_molecules(exclude_pid: int | None = None) -> dict[str, str]:
+    """Molecules a DFT run is computing right now -> since when (HH:MM), from job
+    records and from untracked verify processes."""
+    out = {}
+    for r in list_jobs(100):
+        if r.get("status") in ("starting", "running") and r.get("pid") != exclude_pid:
+            since = time.strftime("%H:%M", time.localtime(r.get("started", time.time())))
+            for m in r.get("molecules") or []:
+                out[_canon(m)] = since
+    for p in untracked_processes():
+        if p["pid"] == exclude_pid or p["script"] != "verify_molecules.py":
+            continue
+        for a in p["args"].split():
+            if not a.startswith("--") and not a.isdigit():
+                out[_canon(a)] = p["started"].split()[3][:5] if len(p["started"].split()) > 3 else p["started"]
+    return out
+
+
+def stop(job_id: str | None = None, pid: int | None = None) -> bool:
+    """Stop a running DFT job (its process and the worker processes it started)."""
+    import signal
+    if job_id:
+        try:
+            pid = json.loads(_path(job_id).read_text()).get("pid")
+        except Exception:
+            pid = None
+    ok = False
+    if pid and alive(pid):
+        try:
+            if os.getpgid(int(pid)) == int(pid):
+                os.killpg(int(pid), signal.SIGTERM)       # the job and its workers (own process group)
+            else:
+                subprocess.run(["pkill", "-TERM", "-P", str(pid)], timeout=5)
+                os.kill(int(pid), signal.SIGTERM)
+            ok = True
+        except OSError:
+            ok = False
+    if job_id:
+        update(job_id, status="stopped", finished=time.time(), current="stopped by hand")
+    return ok
+
+
+def remove(job_id: str) -> None:
+    """Take a finished, failed or stopped job off the list (its record moves to removed/;
+    computed DFT results stay in the cache)."""
+    src = _path(job_id)
+    if src.exists():
+        (JOBS / "removed").mkdir(exist_ok=True)
+        src.replace(JOBS / "removed" / src.name)

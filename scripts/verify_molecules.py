@@ -34,6 +34,18 @@ def run(store, args, job):
         mols = [r.smiles for r in sorted(store.values(), key=lambda r: -(r.objective if r.objective == r.objective else -1))[:n]]
     else:
         mols = args
+    from rdkit import Chem
+    bad = [m for m in mols if Chem.MolFromSmiles(m) is None]     # not a molecule: skip it, keep the rest
+    if bad:
+        print("not valid SMILES, skipped:", " | ".join(bad), flush=True)
+        mols = [m for m in mols if m not in bad]
+    busy = J.running_molecules(exclude_pid=os.getpid())     # never compute a molecule twice at once
+    skipped = [m for m in mols if J._canon(m) in busy]
+    mols = [m for m in mols if J._canon(m) not in busy]
+    if skipped:
+        print("already running elsewhere, skipped:", ", ".join(skipped), flush=True)
+    if job:
+        J.update(job, molecules=mols)
     from h2screener import stability as S
     items = [("[H][H]", "dft", "g"), ("O", "xtb", "aq"), ("O", "dft", "g")]
     for m in mols:
@@ -64,7 +76,12 @@ def run(store, args, job):
                      durations=durs + [now - last[0]])
         last[0] = now
 
-    A.compute_many(items, progress=progress)
+    def planned(n, workers):
+        print(f"{n} calculations to run (others cached), {workers} at a time", flush=True)
+        if job:
+            J.update(job, total=n, done=0, workers=workers)
+
+    A.compute_many(items, progress=progress, planned=planned)
     results = {}
     for m in mols:
         r = store.get(m)

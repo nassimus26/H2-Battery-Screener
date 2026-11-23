@@ -30,3 +30,223 @@
 [6/12] dft   aq CC1=CC(=O)C=CC1=O              ok    1014 s
 [7/12] dft   aq O=C1C=CC(=O)c2ccccc21          ok    2056 s
 [8/12] dft   aq Oc1ccc(O)c2ccccc12             ok    2084 s
+[9/12] dft   aq O=S(=O)(O)c1ccc2c(O)c3ccccc3c(O)c2c1 ok    7073 s
+[10/12] dft   aq O=C1c2ccccc2C(=O)c2cc(S(=O)(=O)O)ccc21 ok    7148 s
+[11/12] dft   aq O=C1c2ccc(S(=O)(=O)O)cc2C(=O)c2cc(S(=O)(=O)O)ccc21 ok    9781 s
+[12/12] dft   aq O=S(=O)(O)c1ccc2c(O)c3ccc(S(=O)(=O)O)cc3c(O)c2c1 ok    9870 s
+xtb hydrogen                     dG    -320.7 vs    -228.6  err   -92.1 kJ  -0.477 V        0 s
+xtb oxygen                       dG       0.0 vs       0.0  err    +0.0 kJ  +0.000 V        0 s
+xtb hydrogen peroxide            dG      61.0 vs    -123.0  err  +184.0 kJ  +0.954 V        0 s
+xtb carbon monoxide              dG    -580.6 vs    -257.2  err  -323.4 kJ  -1.676 V        0 s
+xtb methane                      dG   -1220.6 vs    -801.1  err  -419.5 kJ  -0.544 V        0 s
+xtb ethane                       dG   -2189.3 vs   -1442.6  err  -746.7 kJ  -0.553 V        0 s
+xtb ethylene                     dG   -2014.5 vs   -1314.4  err  -700.1 kJ  -0.605 V        0 s
+xtb acetylene                    dG   -1843.8 vs   -1226.6  err  -617.2 kJ  -0.640 V        0 s
+xtb propane                      dG   -3147.6 vs   -2074.2  err -1073.4 kJ  -0.556 V        0 s
+xtb propene                      dG   -2953.8 vs   -1931.8  err -1022.0 kJ  -0.588 V        0 s
+xtb cyclopropane                 dG   -2950.9 vs   -1973.5  err  -977.4 kJ  -0.563 V        0 s
+xtb butane                       dG   -4109.4 vs   -2703.6  err -1405.8 kJ  -0.560 V        0 s
+xtb isobutane                    dG   -4104.1 vs   -2699.8  err -1404.3 kJ  -0.560 V        0 s
+xtb methanol                     dG    -981.0 vs    -689.3  err  -291.7 kJ  -0.504 V        0 s
+xtb formaldehyde                 dG    -771.5 vs    -520.5  err  -251.0 kJ  -0.650 V        1 s
+xtb formic acid                  dG    -393.8 vs    -272.0  err  -121.8 kJ  -0.631 V        1 s
+xtb ethanol                      dG   -1932.3 vs   -1306.1  err  -626.2 kJ  -0.541 V        1 s
+xtb dimethyl ether               dG   -1947.1 vs   -1362.0  err  -585.1 kJ  -0.505 V        1 s
+xtb acetaldehyde                 dG   -1686.2 vs   -1113.0  err  -573.2 kJ  -0.594 V        1 s
+xtb acetic acid                  dG   -1319.8 vs    -871.5  err  -448.3 kJ  -0.581 V        1 s
+xtb ethylene oxide               dG   -1722.3 vs   -1232.9  err  -489.4 kJ  -0.507 V        1 s
+xtb ammonia                      dG    -366.2 vs    -326.5  err   -39.7 kJ  -0.137 V        1 s
+xtb hydrazine                    dG    -534.7 vs    -616.6  err   +81.9 kJ  +0.212 V        1 s
+xtb hydrogen cyanide             dG    -871.8 vs    -633.4  err  -238.4 kJ  -0.494 V        1 s
+xtb methylamine                  dG   -1332.3 vs    -998.0  err  -334.3 kJ  -0.385 V        1 s
+xtb nitric oxide                 dG     -12.3 vs     -86.6  err   +74.3 kJ  +0.385 V        1 s
+xtb nitrogen dioxide             dG     292.6 vs     -51.3  err  +343.9 kJ  +0.891 V        1 s
+xtb nitrous oxide                dG     308.2 vs    -103.7  err  +411.9 kJ  +2.134 V        1 s
+xtb hydrogen sulfide             dG    -815.5 vs    -495.3  err  -320.2 kJ  -0.553 V        1 s
+xtb sulfur trioxide              dG     180.2 vs      71.0  err  +109.2 kJ  +0.566 V        1 s
+xtb carbonyl sulfide             dG    -932.0 vs    -525.3  err  -406.7 kJ  -0.702 V        1 s
+xtb carbon disulfide             dG   -1835.0 vs   -1061.7  err  -773.3 kJ  -0.668 V        1 s
+xtb chloromethane                dG    -980.0 vs    -659.9  err  -320.1 kJ  -0.553 V        1 s
+xtb p-benzoquinone               E 1.1531900035936415 vs 0.6992
+xtb o-benzoquinone               E 1.2212953766685373 vs 0.792
+xtb methyl-p-benzoquinone        E 1.0785347459996304 vs 0.645
+xtb 1,4-naphthoquinone           E 0.8819604900109003 vs 0.47
+xtb AQS                          E 0.6509935632115024 vs 0.187
+xtb AQDS                         E 0.796691700299536 vs 0.213
+xtb {
+ "gas reactions, V": {
+  "n": 33,
+  "mae": 0.6203140562192683,
+  "rmse": 0.7244229360688849,
+  "max": 2.134265971820165,
+  "mean": -0.30869067925539334
+ },
+ "gas reactions, kJ/mol": {
+  "n": 33,
+  "mae": 478.9857947037305,
+  "rmse": 602.2397919469004,
+  "max": 1405.773728075385,
+  "mean": -405.94843291348843
+ },
+ "formation test, kJ/mol": {
+  "n": 22,
+  "mae": 105.88395408369136,
+  "rmse": 136.7315732384999,
+  "max": 276.15034208151553,
+  "mean": -44.806471831725155
+ },
+ "formation train, kJ/mol": {
+  "n": 23,
+  "mae": 112.46696602972418,
+  "rmse": 154.0164285320504,
+  "max": 411.85072173474254,
+  "mean": -55.51441857891046
+ },
+ "aqueous voltage, V": {
+  "n": 6,
+  "mae": 0.46274431329729127,
+  "rmse": 0.4661994016890181,
+  "max": 0.583691700299536,
+  "mean": 0.46274431329729127
+ }
+}
+dft hydrogen                     dG    -200.7 vs    -228.6  err   +27.9 kJ  +0.145 V        0 s
+dft oxygen                       dG       0.0 vs       0.0  err    +0.0 kJ  +0.000 V        0 s
+dft hydrogen peroxide            dG    -131.2 vs    -123.0  err    -8.2 kJ  -0.043 V        0 s
+dft carbon monoxide              dG    -250.0 vs    -257.2  err    +7.2 kJ  +0.037 V        0 s
+dft methane                      dG    -715.4 vs    -801.1  err   +85.7 kJ  +0.111 V        0 s
+dft ethane                       dG   -1293.5 vs   -1442.6  err  +149.1 kJ  +0.110 V        0 s
+dft ethylene                     dG   -1203.1 vs   -1314.4  err  +111.3 kJ  +0.096 V        0 s
+dft acetylene                    dG   -1162.0 vs   -1226.6  err   +64.6 kJ  +0.067 V        0 s
+dft propane                      dG   -1862.0 vs   -2074.2  err  +212.2 kJ  +0.110 V        0 s
+dft propene                      dG   -1757.7 vs   -1931.8  err  +174.1 kJ  +0.100 V        0 s
+dft cyclopropane                 dG   -1786.3 vs   -1973.5  err  +187.2 kJ  +0.108 V        0 s
+dft butane                       dG   -2433.5 vs   -2703.6  err  +270.1 kJ  +0.108 V        0 s
+dft isobutane                    dG   -2429.4 vs   -2699.8  err  +270.4 kJ  +0.108 V        0 s
+dft methanol                     dG    -615.4 vs    -689.3  err   +73.9 kJ  +0.128 V        0 s
+dft formaldehyde                 dG    -474.2 vs    -520.5  err   +46.3 kJ  +0.120 V        0 s
+dft formic acid                  dG    -237.7 vs    -272.0  err   +34.3 kJ  +0.178 V        1 s
+dft ethanol                      dG   -1173.8 vs   -1306.1  err  +132.3 kJ  +0.114 V        1 s
+dft dimethyl ether               dG   -1216.8 vs   -1362.0  err  +145.2 kJ  +0.125 V        1 s
+dft acetaldehyde                 dG   -1005.1 vs   -1113.0  err  +107.9 kJ  +0.112 V        1 s
+dft acetic acid                  dG    -773.9 vs    -871.5  err   +97.6 kJ  +0.126 V        1 s
+dft ethylene oxide               dG   -1119.0 vs   -1232.9  err  +113.9 kJ  +0.118 V        1 s
+dft ammonia                      dG    -285.5 vs    -326.5  err   +41.0 kJ  +0.142 V        1 s
+dft hydrazine                    dG    -560.5 vs    -616.6  err   +56.1 kJ  +0.145 V        1 s
+dft hydrogen cyanide             dG    -596.3 vs    -633.4  err   +37.1 kJ  +0.077 V        1 s
+dft methylamine                  dG    -890.9 vs    -998.0  err  +107.1 kJ  +0.123 V        1 s
+dft nitric oxide                 dG     -87.4 vs     -86.6  err    -0.8 kJ  -0.004 V        1 s
+dft nitrogen dioxide             dG     -58.2 vs     -51.3  err    -6.9 kJ  -0.018 V        1 s
+dft nitrous oxide                dG    -113.7 vs    -103.7  err   -10.0 kJ  -0.052 V        1 s
+dft hydrogen sulfide             dG    -414.5 vs    -495.3  err   +80.8 kJ  +0.140 V        1 s
+dft sulfur trioxide              dG      68.2 vs      71.0  err    -2.8 kJ  -0.015 V        1 s
+dft carbonyl sulfide             dG    -466.4 vs    -525.3  err   +58.9 kJ  +0.102 V        1 s
+dft carbon disulfide             dG    -952.3 vs   -1061.7  err  +109.4 kJ  +0.094 V        1 s
+dft chloromethane                dG    -593.8 vs    -659.9  err   +66.1 kJ  +0.114 V        1 s
+dft p-benzoquinone               E 0.6800729180266056 vs 0.6992
+dft o-benzoquinone               E 0.8481630300777487 vs 0.792
+dft methyl-p-benzoquinone        E 0.6159133079800556 vs 0.645
+dft 1,4-naphthoquinone           E 0.39556801549091447 vs 0.47
+dft AQS                          E 0.044892370182916246 vs 0.187
+dft AQDS                         E 0.17106994255051466 vs 0.213
+dft {
+ "gas reactions, V": {
+  "n": 33,
+  "mae": 0.09663184583619552,
+  "rmse": 0.10590311207768986,
+  "max": 0.17764265756412745,
+  "mean": 0.08871414995601756
+ },
+ "gas reactions, kJ/mol": {
+  "n": 33,
+  "mae": 87.76810265579256,
+  "rmse": 114.04250270059394,
+  "max": 270.41749268323156,
+  "mean": 86.03206716154021
+ },
+ "formation test, kJ/mol": {
+  "n": 22,
+  "mae": 13.743418036414631,
+  "rmse": 17.895662009262686,
+  "max": 36.11401942549273,
+  "mean": 9.057773701884038
+ },
+ "formation train, kJ/mol": {
+  "n": 23,
+  "mae": 9.002850403117632,
+  "rmse": 13.454719481142934,
+  "max": 36.11585056255572,
+  "mean": -0.09740670938525584
+ },
+ "aqueous voltage, V": {
+  "n": 6,
+  "mae": 0.06047441264112369,
+  "rmse": 0.07286859789248652,
+  "max": 0.14210762981708375,
+  "mean": -0.041753402615207456
+ }
+}
+ccsdt hydrogen                     dG    -215.5 vs    -228.6  err   +13.1 kJ  +0.068 V        0 s
+ccsdt oxygen                       dG       0.0 vs       0.0  err    +0.0 kJ  +0.000 V        0 s
+ccsdt hydrogen peroxide            dG    -131.5 vs    -123.0  err    -8.5 kJ  -0.044 V        0 s
+ccsdt carbon monoxide              dG    -240.9 vs    -257.2  err   +16.3 kJ  +0.084 V        0 s
+ccsdt methane                      dG    -765.8 vs    -801.1  err   +35.3 kJ  +0.046 V        0 s
+ccsdt ethane                       dG   -1381.5 vs   -1442.6  err   +61.1 kJ  +0.045 V        0 s
+ccsdt ethylene                     dG   -1264.4 vs   -1314.4  err   +50.0 kJ  +0.043 V        0 s
+ccsdt acetylene                    dG   -1193.4 vs   -1226.6  err   +33.2 kJ  +0.034 V        0 s
+ccsdt propane                      dG   -1986.7 vs   -2074.2  err   +87.5 kJ  +0.045 V        0 s
+ccsdt propene                      dG   -1857.3 vs   -1931.8  err   +74.5 kJ  +0.043 V        0 s
+ccsdt cyclopropane                 dG   -1900.9 vs   -1973.5  err   +72.6 kJ  +0.042 V        0 s
+ccsdt butane                       dG   -2594.8 vs   -2703.6  err  +108.8 kJ  +0.043 V        0 s
+ccsdt isobutane                    dG   -2589.8 vs   -2699.8  err  +110.0 kJ  +0.044 V        0 s
+ccsdt methanol                     dG    -659.6 vs    -689.3  err   +29.7 kJ  +0.051 V        0 s
+ccsdt formaldehyde                 dG    -496.8 vs    -520.5  err   +23.7 kJ  +0.061 V        0 s
+ccsdt formic acid                  dG    -256.7 vs    -272.0  err   +15.3 kJ  +0.079 V        1 s
+ccsdt ethanol                      dG   -1254.7 vs   -1306.1  err   +51.4 kJ  +0.044 V        1 s
+ccsdt dimethyl ether               dG   -1302.7 vs   -1362.0  err   +59.3 kJ  +0.051 V        1 s
+ccsdt acetaldehyde                 dG   -1068.1 vs   -1113.0  err   +44.9 kJ  +0.046 V        1 s
+ccsdt acetic acid                  dG    -832.8 vs    -871.5  err   +38.7 kJ  +0.050 V        1 s
+ccsdt ethylene oxide               dG   -1192.1 vs   -1232.9  err   +40.8 kJ  +0.042 V        1 s
+ccsdt ammonia                      dG    -317.8 vs    -326.5  err    +8.7 kJ  +0.030 V        1 s
+ccsdt hydrazine                    dG    -618.1 vs    -616.6  err    -1.5 kJ  -0.004 V        1 s
+ccsdt hydrogen cyanide             dG    -612.3 vs    -633.4  err   +21.1 kJ  +0.044 V        1 s
+ccsdt methylamine                  dG    -964.2 vs    -998.0  err   +33.8 kJ  +0.039 V        1 s
+ccsdt nitric oxide                 dG     -88.3 vs     -86.6  err    -1.7 kJ  -0.009 V        1 s
+ccsdt nitrogen dioxide             dG     -67.8 vs     -51.3  err   -16.5 kJ  -0.043 V        1 s
+ccsdt nitrous oxide                dG    -123.3 vs    -103.7  err   -19.6 kJ  -0.102 V        1 s
+ccsdt hydrogen sulfide             dG    -415.0 vs    -495.3  err   +80.3 kJ  +0.139 V        1 s
+ccsdt sulfur trioxide              dG      39.8 vs      71.0  err   -31.2 kJ  -0.162 V        1 s
+ccsdt carbonyl sulfide             dG    -452.9 vs    -525.3  err   +72.4 kJ  +0.125 V        1 s
+ccsdt carbon disulfide             dG    -917.2 vs   -1061.7  err  +144.5 kJ  +0.125 V        1 s
+ccsdt chloromethane                dG    -637.5 vs    -659.9  err   +22.4 kJ  +0.039 V        1 s
+ccsdt {
+ "gas reactions, V": {
+  "n": 33,
+  "mae": 0.05657400164290845,
+  "rmse": 0.06711810928060011,
+  "max": 0.16167230617002762,
+  "mean": 0.0345829089351638
+ },
+ "gas reactions, kJ/mol": {
+  "n": 33,
+  "mae": 43.279728874523364,
+  "rmse": 55.289991850646345,
+  "max": 144.5301610508934,
+  "mean": 38.49147288132697
+ },
+ "formation test, kJ/mol": {
+  "n": 22,
+  "mae": 10.529078948651627,
+  "rmse": 20.254071584506967,
+  "max": 74.07752144199333,
+  "mean": 5.10185655976807
+ },
+ "formation train, kJ/mol": {
+  "n": 23,
+  "mae": 9.514320359596065,
+  "rmse": 14.319899299113485,
+  "max": 42.87950916986449,
+  "mean": 4.174009710832363
+ },
+ "aqueous voltage, V": null
+}

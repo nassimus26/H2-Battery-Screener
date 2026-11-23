@@ -363,15 +363,18 @@ def _work(args):
     return smiles, level, phase, (r or {}).get("error")
 
 
-def compute_many(items, workers: int | None = None, progress=None):
+def compute_many(items, workers: int | None = None, progress=None, planned=None):
     """Compute (smiles, level, phase) items in parallel processes (PySCF on macOS runs one core per
     process). The xTB step of each item is done first in the same process. Resumable: cached items
-    are skipped."""
+    are skipped. planned(n, workers) is called once the calculations to run are known, before any
+    starts (progress is only called as each one finishes)."""
     from concurrent.futures import ProcessPoolExecutor, as_completed
     done = load()
     todo = [(Chem.MolToSmiles(Chem.MolFromSmiles(s)), lv, ph) for s, lv, ph in items]
     todo = [x for x in dict.fromkeys(todo) if key(*x) not in done]
     workers = workers or max(1, (os.cpu_count() or 4) - 6)
+    if planned:
+        planned(len(todo), min(workers, len(todo)))
     n = 0
     with ProcessPoolExecutor(max_workers=workers) as ex:
         futs = [ex.submit(_work, x) for x in todo]

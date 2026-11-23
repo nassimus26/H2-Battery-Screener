@@ -2,7 +2,7 @@
 
 Measured values are used only here, to test. See h2screener/abinitio.py for the method.
 
-## GFN2-xTB (2026-11-23 05:22, 0 s)
+## GFN2-xTB (2026-11-23 08:07, 2 s)
 
 - gas reactions, V: mean abs error 0.620, RMS 0.724, max 2.134, mean signed -0.309 (n = 33)
 - gas reactions, kJ/mol: mean abs error 478.986, RMS 602.240, max 1405.774, mean signed -405.948 (n = 33)
@@ -55,12 +55,13 @@ Measured values are used only here, to test. See h2screener/abinitio.py for the 
 | AQS | 0.187 | 0.651 | +0.464 | Clark 1960 |
 | AQDS | 0.213 | 0.797 | +0.584 | Er et al. 2015 |
 
-## WB97X-V/DEF2-TZVP//GFN2-xTB (2026-11-23 05:22, 0 s)
+## WB97X-V/DEF2-TZVP//GFN2-xTB (water: + ALPB solvation) (2026-11-23 08:08, 2 s)
 
 - gas reactions, V: mean abs error 0.097, RMS 0.106, max 0.178, mean signed +0.089 (n = 33)
 - gas reactions, kJ/mol: mean abs error 87.768, RMS 114.043, max 270.417, mean signed +86.032 (n = 33)
 - formation test, kJ/mol: mean abs error 13.743, RMS 17.896, max 36.114, mean signed +9.058 (n = 22)
 - formation train, kJ/mol: mean abs error 9.003, RMS 13.455, max 36.116, mean signed -0.097 (n = 23)
+- aqueous voltage, V: mean abs error 0.060, RMS 0.073, max 0.142, mean signed -0.042 (n = 6)
 
 | oxidation of | electrons | dG measured | dG computed | error kJ/mol | error V |
 |---|---|---|---|---|---|
@@ -100,14 +101,14 @@ Measured values are used only here, to test. See h2screener/abinitio.py for the 
 
 | quinone | measured E V | computed E V | error V | source |
 |---|---|---|---|---|
-| p-benzoquinone | 0.699 | - | - | standard potential table |
-| o-benzoquinone | 0.792 | - | - | Clark 1960 |
-| methyl-p-benzoquinone | 0.645 | - | - | Clark 1960 |
-| 1,4-naphthoquinone | 0.470 | - | - | Clark 1960 |
-| AQS | 0.187 | - | - | Clark 1960 |
-| AQDS | 0.213 | - | - | Er et al. 2015 |
+| p-benzoquinone | 0.699 | 0.680 | -0.019 | standard potential table |
+| o-benzoquinone | 0.792 | 0.848 | +0.056 | Clark 1960 |
+| methyl-p-benzoquinone | 0.645 | 0.616 | -0.029 | Clark 1960 |
+| 1,4-naphthoquinone | 0.470 | 0.396 | -0.074 | Clark 1960 |
+| AQS | 0.187 | 0.045 | -0.142 | Clark 1960 |
+| AQDS | 0.213 | 0.171 | -0.042 | Er et al. 2015 |
 
-## CCSD(T)/cc-pvtz//GFN2-xTB (2026-11-23 05:22, 0 s)
+## CCSD(T)/cc-pvtz//GFN2-xTB (2026-11-23 08:08, 2 s)
 
 - gas reactions, V: mean abs error 0.057, RMS 0.067, max 0.162, mean signed +0.035 (n = 33)
 - gas reactions, kJ/mol: mean abs error 43.280, RMS 55.290, max 144.530, mean signed +38.491 (n = 33)

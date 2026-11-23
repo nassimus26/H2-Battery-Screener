@@ -14,12 +14,21 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import html
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
+import plotly.io as _pio
+# every chart opens with the pan tool (box and lasso selection stay in each chart's toolbar); set in the
+# template so it also holds after a click or a closed details window rebuilds the chart
+_pio.templates["streamlit"].layout.dragmode = "pan"
 
 from h2screener import ai_search, gas_search, gases, design, discover, explain, options, pairs, rank, reference, runs, stackcost, synthesis, animation
+if not hasattr(animation, "switchable_html"):
+    # a server started before this function existed keeps the old module (file watching is off): load it again
+    import importlib
+    animation = importlib.reload(animation)
 from h2screener import molecules as M
 
 
@@ -50,18 +59,84 @@ def horizontal_axis_titles(fig):
     return fig
 
 
-def _with_horizontal_titles(orig):
+MARK_COLOR = "#22d3ee"      # a tag with no colour picked
+
+
+def mol_marks() -> dict:
+    """{smiles: {'tag': str, 'color': '#rrggbb'}}: the tags and colours set in the molecule details."""
+    return st.session_state.get("mol_marks") or {}
+
+
+def _ids_in(cd) -> set:
+    """The molecules a chart point stands for: every string of its customdata, and each side of 'a | b'."""
+    try:
+        items = list(cd) if isinstance(cd, (list, tuple)) or hasattr(cd, "tolist") else [cd]
+    except TypeError:
+        items = [cd]
+    out = set()
+    for x in items:
+        if isinstance(x, str):
+            out.add(x)
+            out.update(part.strip() for part in x.split("|"))
+    return out
+
+
+def mark_points(fig):
+    """Draw a ring in the molecule's colour, with its tag, around every point of a marked molecule
+    (or of a pair, cell or candidate that contains it), on any chart. The ring carries the point's
+    own customdata, so clicking it opens the same details as the point."""
+    marks = mol_marks()
+    if not marks or not hasattr(fig, "data") or getattr(fig.layout, "meta", None) == "marked":
+        return fig
+    hits = {}
+    for tr in list(fig.data):
+        if getattr(tr, "type", "") not in ("scatter", "scattergl") or getattr(tr, "meta", None) == "mark":
+            continue
+        xs, ys, cds = tr.x, tr.y, tr.customdata
+        if xs is None or ys is None or cds is None:
+            continue
+        for x, y, cd in zip(xs, ys, cds):
+            for smi in _ids_in(cd) & marks.keys():
+                h = hits.setdefault((smi, tr.xaxis or "x", tr.yaxis or "y"), ([], [], []))
+                if any(px_ == x and py_ == y for px_, py_ in zip(h[0], h[1])):
+                    continue                    # the same point drawn by several traces: one ring
+                h[0].append(x)
+                h[1].append(y)
+                h[2].append(cd.tolist() if hasattr(cd, "tolist") else cd)
+    for (smi, xa, ya), (xs, ys, cds) in hits.items():
+        m = marks[smi]
+        tag, col = (m.get("tag") or "").strip(), m.get("color") or MARK_COLOR
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys, customdata=cds, xaxis=xa, yaxis=ya, meta="mark", mode="markers+text" if tag else "markers",
+            marker=dict(symbol="circle-open", size=22, color=col, line=dict(width=3, color=col)),
+            text=[tag] + [""] * (len(xs) - 1), textposition="top center", textfont=dict(color=col, size=13),
+            name=f"🏷 {tag}" if tag else f"🏷 {smi[:22]}", legendgroup=f"mark_{smi}",
+            showlegend=xa == "x" and ya == "y",
+            hovertemplate=(f"<b>{tag}</b><br>" if tag else "") + f"{smi}<extra></extra>"))
+    if hits:
+        fig.layout.meta = "marked"
+    return fig
+
+
+def _chart_hook(orig):
+    """Every chart passes through the hooks of the current page run (so an edited hook applies at once)."""
     def plotly_chart(self, figure_or_data=None, *a, **k):
         if hasattr(figure_or_data, "layout"):
-            horizontal_axis_titles(figure_or_data)
+            for h in getattr(_DG, "_chart_hooks", ()):
+                h(figure_or_data)
         return orig(self, figure_or_data, *a, **k)
     return plotly_chart
 
 
 from streamlit.delta_generator import DeltaGenerator as _DG   # noqa: E402
-if not getattr(_DG.plotly_chart, "_horizontal", False):
-    _DG.plotly_chart = _with_horizontal_titles(_DG.plotly_chart)
-    _DG.plotly_chart._horizontal = True
+if not getattr(_DG.plotly_chart, "_hooked", False):
+    _orig_ = _DG.plotly_chart
+    while getattr(_orig_, "__wrapped_orig__", None):            # an older wrapper from before this server reload
+        _orig_ = _orig_.__wrapped_orig__
+    _DG.plotly_chart = _chart_hook(_orig_)
+    _DG.plotly_chart._hooked = True
+    _DG.plotly_chart.__wrapped_orig__ = _orig_
+_DG._chart_hooks = (horizontal_axis_titles, mark_points)
 st.plotly_chart = lambda *a, **k: _DG.plotly_chart(st._main, *a, **k)
 
 ROOT = Path(__file__).resolve().parent
@@ -77,7 +152,9 @@ header[data-testid="stHeader"] a {pointer-events: auto;}
                            padding: 0 0.3rem; backdrop-filter: blur(4px);}
 [data-testid="stDecoration"] {display: none;}
 [data-testid="stMainBlockContainer"], .block-container {padding-top: 1.2rem !important;}
-[data-testid="stSidebarHeader"] {height: 2.2rem; min-height: 2.2rem; padding-top: 0.4rem; padding-bottom: 0;}
+[data-testid="stSidebarHeader"] {height: 0; min-height: 0; padding: 0; margin: 0; overflow: visible; position: relative; z-index: 2;}
+[data-testid="stSidebarCollapseButton"] {position: absolute; top: 0.875rem; right: 0.2rem;   /* on the "What to build" line */
+                                        display: block !important; visibility: visible !important; opacity: 1 !important;}
 [data-testid="stSidebarUserContent"] {padding-top: 0 !important;}
 h1 {padding-top: 0 !important; margin-top: 0 !important;}
 [data-testid="stMetricValue"] {font-size: 1.45rem !important; line-height: 1.25;}
@@ -103,7 +180,7 @@ SS["_full_run"] = True                      # set to False at the end of every f
 SETTING_KEYS = ["cfg_tab", "mol_live", "pair_live", "cfg_preset", "cfg_power", "cfg_hours", "cfg_pmax", "cfg_pmin", "cfg_rte", "cfg_life", "cfg_elec",
                 "cfg_topn", "cfg_scale", "watchlist", "mol_gens", "mol_batch", "mol_heavy", "mol_kappa",
                 "pair_gens", "pair_batch", "pair_heavy", "pair_kappa", "cfg_kind", "gas_live",
-                "gas_gens", "gas_batch", "gas_heavy", "gas_kappa"] + [f"w_{k}" for k in BASE["ranking"]
+                "gas_gens", "gas_batch", "gas_heavy", "gas_kappa", "mol_level", "mol_marks"] + [f"w_{k}" for k in BASE["ranking"]
                                                                          if isinstance(BASE["ranking"][k], (int, float))]
 if "_settings_loaded" not in SS:            # restore the last settings after a page reload
     for k, v in runs.load_settings().items():
@@ -178,7 +255,7 @@ def _dur(sec) -> str:
 
 
 def dft_panel():
-    """Background DFT jobs with their progress (sidebar; refreshes itself while one runs)."""
+    """Background DFT jobs with their progress (bottom of the page; refreshes itself while one runs)."""
     import time as _t
     from h2screener import dftjobs as _J
     jobs = [j for j in _J.list_jobs() if j.get("status") in ("starting", "running")
@@ -199,12 +276,29 @@ def dft_panel():
                 eta = _J.eta_seconds(j)
                 st.markdown(f"**{name or 'preparing…'}**")
                 if total:
-                    st.progress(done / total, text=f"{done} of {total} calculations · {_dur(el)} so far")
+                    # finished calculations only move in big steps (10-30 min each, several in
+                    # parallel): between them the bar follows the elapsed share of the estimate
+                    frac = done / total
+                    if eta is not None and el + eta > 0:
+                        frac = max(frac, min(el / (el + eta), 0.95))
+                    w_ = j.get("workers")
+                    st.progress(min(frac, 1.0), text=f"{done} of {total} calculations finished"
+                                + (f" ({min(w_, total - done)} running now)" if w_ and done < total else "")
+                                + f" · {_dur(el)} so far")
+                elif total == 0:
+                    st.progress(1.0, text=f"everything was already computed: writing the results · {_dur(el)}")
                 else:
                     st.progress(0.0, text=f"preparing the calculations · {_dur(el)} so far")
-                st.caption(("about " + _dur(eta) + " left" if eta is not None else
+                st.caption(("about " + _dur(eta) + " left"
+                            + (" (rough guess: ~20 min per calculation until the first one finishes)"
+                               if _J.eta_is_rough(j) else "") if eta is not None else
                             "10-30 min per molecule; the first finished calculation gives an estimate")
                            + (f" · last: {j['current'][:60]}" if j.get("current") else ""))
+                with st.popover("Stop", width="content"):
+                    st.write("Stop this DFT run? Calculations already finished are kept and reused next time.")
+                    if st.button("Yes, stop it", key=f"dftstop_{j['id']}"):
+                        _J.stop(job_id=j["id"])
+                        st.rerun(scope="app")
             elif st_ == "finished":
                 res = j.get("results") or {}
                 lines = [f"{m[:28]}: {v['xtb']:.2f} → **{v['dft']:.2f} V**" if v.get("dft") is not None
@@ -212,22 +306,28 @@ def dft_panel():
                 st.markdown(f"✅ finished {_t.strftime('%H:%M', _t.localtime(j['finished']))} (xTB → DFT)  \n"
                             + "  \n".join(lines or [name]))
                 for m in list(res)[:3]:
-                    if st.button(f"Open {m[:24]}", key=f"dftopen_{j['id']}_{m}", width="stretch"):
+                    if st.button(f"Open {m[:24]}", key=f"dftopen_{j['id']}_{m}", width="content"):
                         SS["pending_dialog"] = ("molecule", [m])
                         st.rerun(scope="app")
+                if st.button("Remove from the list", key=f"dftrm_{j['id']}", width="content"):
+                    _J.remove(j["id"])
+                    st.rerun(scope="app")
             else:
                 st.markdown(f"⚠️ **{name}**: {st_} ({j.get('current') or 'no detail'})")
+                if st.button("Remove from the list", key=f"dftrm_{j['id']}", width="content"):
+                    _J.remove(j["id"])
+                    st.rerun(scope="app")
         for p_ in extra:
             st.markdown(f"**{p_['script']}** {p_['args'][:40]}")
             st.caption(f"running since {p_['started']} (started before progress tracking: no estimate)")
+            with st.popover("Stop", width="content"):
+                st.write("Stop this run? Calculations already finished are kept and reused next time.")
+                if st.button("Yes, stop it", key=f"dftstop_pid_{p_['pid']}"):
+                    _J.stop(pid=p_["pid"])
+                    st.rerun(scope="app")
 
 
 with st.sidebar:
-    from h2screener import dftjobs as _DJ
-    if any(j.get("status") in ("starting", "running") for j in _DJ.list_jobs()) or _DJ.untracked_processes():
-        st.fragment(dft_panel, run_every=10)()
-    else:
-        dft_panel()
     st.header("What to build")
     default("cfg_preset", list(PRESETS)[0])
     preset = st.selectbox("Use", list(PRESETS), key="cfg_preset", on_change=apply_preset)
@@ -590,6 +690,28 @@ def take(event, key: str, kind: str):
     end of the page run. The chart is redrawn unselected next time."""
     SS[f"how_{key}"] = ("take", kind)
     pts = _points(event)
+    sel = _selection(event)
+    try:
+        boxed = bool(sel.get("box") or sel.get("lasso")) if isinstance(sel, dict) else \
+            bool(getattr(sel, "box", None) or getattr(sel, "lasso", None))
+    except Exception:
+        boxed = False
+    if pts and boxed and kind in ("molecule", "pair"):
+        # a box or lasso around several dots: keep them for 'Run DFT for the selection' (multi_dft_bar)
+        SS[f"nonce_{key}"] = SS.get(f"nonce_{key}", 0) + 1
+        # customdata starts with the molecule (pair: the two molecules); charts may append
+        # hover columns after it (notes...), which are not molecules
+        lib = ai_search.load_store()
+        ids = []
+        for p_ in pts:
+            cd = p_.get("customdata")
+            cd = list(cd) if isinstance(cd, (list, tuple)) else [cd]
+            for x in cd[:2 if kind == "pair" else 1]:
+                if isinstance(x, str) and x in lib and x not in ids:
+                    ids.append(x)
+        if ids:
+            SS[f"multisel_{key}"] = ids
+        return
     if pts:
         SS[f"nonce_{key}"] = SS.get(f"nonce_{key}", 0) + 1     # always consume the click
         cd = pts[0].get("customdata")
@@ -646,6 +768,44 @@ def take_row(event, key: str, kind: str):
         if rows[0] < len(values):
             SS["pending_dialog"] = (kind, list(values[rows[0]]))
             open_now()
+
+
+def multi_dft_bar(key: str):
+    """The molecules boxed or lassoed on a chart (take()), with a button to run DFT for all of them."""
+    ids = SS.get(f"multisel_{key}")
+    if not ids:
+        return
+    from h2screener import abinitio as _A, dftjobs as _J
+    store, busy = dft_store(), _J.running_molecules()
+    verified, running_, todo = [], [], []
+    for m in ids:
+        r = store.get(m)
+        red = (r.forms[0] if r.forms else r.reduced) if r else None
+        if red and _A.hydrogenation_voltage(m, red, 1, "dft", compute=False) is not None:
+            verified.append(m)
+        elif _J._canon(m) in busy:
+            running_.append(m)
+        else:
+            todo.append(m)
+    with st.container(border=True):
+        st.markdown(f"**{len(ids)} molecule(s) selected** on the chart: {len(todo)} to verify with DFT"
+                    + (f", {len(verified)} already verified" if verified else "")
+                    + (f", {len(running_)} already running" if running_ else "")
+                    + (" (10-30 min each, several in parallel)" if todo else ""))
+        with st.expander("Show them"):
+            st.write(pd.DataFrame({"molecule": ids, "DFT": ["verified" if m in verified else "running"
+                                                             if m in running_ else "to compute" for m in ids]}))
+        c1, c2 = st.columns(2)
+        if todo and c1.button(f"🔬 Run DFT for these {len(todo)}",
+                              key=f"multidft_{key}", width="stretch", type="primary"):
+            launch_verify(todo)
+            SS.pop(f"multisel_{key}", None)
+            st.toast(f"DFT started in the background for {len(todo)} molecule(s): follow it under "
+                     "'🔬 Background DFT' at the bottom of the page.")
+            st.rerun(scope="app")
+        if c2.button("Clear the selection", key=f"multiclr_{key}", width="stretch"):
+            SS.pop(f"multisel_{key}", None)
+            st.rerun(scope="app")
 
 
 DIALOG_WHAT = {"couple": "couple", "molecule": "molecule", "pair": "pair", "gasmol": "gas molecule",
@@ -705,11 +865,23 @@ def open_pending_dialog():
         gas_cell_dialog(v[0])
 
 
-def dft_store() -> dict:
+def mol_level(smiles: str) -> str:
+    """'dft' or 'xtb': which voltage the page shows for a DFT-checked molecule (the switch in its details)."""
+    return (SS.get("mol_level") or {}).get(smiles, "dft")
+
+
+def as_chosen(r):
+    """The molecule with the values its details switch is set to (DFT unless switched to xTB)."""
+    return M.xtb_version(r) if r.xtb_steps and mol_level(r.smiles) == "xtb" else r
+
+
+def dft_store(chosen: bool = True) -> dict:
     """The molecule library as the page shows it: a molecule whose first hydrogen
-    uptake was verified with DFT uses that voltage (M.with_dft); the AI search
-    itself keeps working on xTB voltages so it compares like with like."""
-    return {s_: M.with_dft(M.rescore(r_)) for s_, r_ in ai_search.load_store().items()}
+    uptake was verified with DFT uses that voltage (M.with_dft), unless its details
+    switch is set to xTB (chosen=False ignores the switch); the AI search itself
+    keeps working on xTB voltages so it compares like with like."""
+    out = {s_: M.with_dft(M.rescore(r_)) for s_, r_ in ai_search.load_store().items()}
+    return {s_: as_chosen(r_) for s_, r_ in out.items()} if chosen else out
 
 
 @st.cache_data(show_spinner=False)
@@ -952,7 +1124,13 @@ def launch_verify(args: list) -> None:
     from h2screener import dftjobs as _J
     log = ROOT / "scripts" / "dev" / "verify.log"
     log.parent.mkdir(parents=True, exist_ok=True)
-    job = _J.new_job([str(a) for a in args if not str(a).startswith("--") and not str(a).isdigit()])
+    busy = _J.running_molecules()
+    mols = [str(a) for a in args if not str(a).startswith("--") and not str(a).isdigit()]
+    if mols and all(_J._canon(m) in busy for m in mols):
+        st.toast("DFT is already running for this molecule: see '🔬 Background DFT' at the bottom of the page.")
+        return
+    args = [a for a in args if str(a) not in mols or _J._canon(str(a)) not in busy]
+    job = _J.new_job([m for m in mols if _J._canon(m) not in busy])
     proc = subprocess.Popen([_sys.executable, str(ROOT / "scripts" / "verify_molecules.py"), "--job", job,
                              *map(str, args)], cwd=str(ROOT), stdout=open(log, "a"), stderr=subprocess.STDOUT,
                             stdin=subprocess.DEVNULL, start_new_session=True)
@@ -968,6 +1146,12 @@ def launch_gas_fp() -> None:
                      stdout=open(log, "a"), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
 
 
+def dft_busy_since(smiles: str) -> str | None:
+    """When a DFT run computing this molecule started (HH:MM), or None."""
+    from h2screener import dftjobs as _J
+    return _J.running_molecules().get(_J._canon(smiles))
+
+
 def dft_check(r, kp: str):
     """First-principles voltage of the first hydrogen uptake, or a button to compute it."""
     from h2screener import abinitio as _A
@@ -979,10 +1163,13 @@ def dft_check(r, kp: str):
     if v is not None:
         st.caption(f"🔬 **First-principles check** ({_A.LEVELS['dft']}, no reference couple): first H2 at "
                    f"**{v:.2f} V** vs {x:.2f} V from the fast xTB search (difference {v - x:+.2f} V). "
-                   "The numbers on this page use the DFT voltage.")
+                   "Pick DFT or xTB values with the switch below.")
+    elif since_ := dft_busy_since(r.smiles):
+        st.caption(f"🔬 DFT is already running for this molecule (since {since_}): "
+                   "follow it under '🔬 Background DFT' at the bottom of the page.")
     elif st.button("🔬 Verify with DFT (10-30 min, in the background)", key=f"{kp}_dft"):
         launch_verify([r.smiles])
-        st.toast("DFT started in the background: follow it under '🔬 Background DFT' at the top of the sidebar.")
+        st.toast("DFT started in the background: follow it under '🔬 Background DFT' at the bottom of the page.")
 
 
 def stability_table(r):
@@ -1038,10 +1225,28 @@ def dft_before_after(r, cfgs_dft, kp: str):
                  _ba_row("battery: efficiency", bx.rte, bd.rte, "{:.2f}"),
                  _ba_row("battery: lifetime cost", bx.lcos_usd_kwh, bd.lcos_usd_kwh, "{:.3f}", " USD/kWh"),
                  _ba_row("battery: energy per kg", bx.wh_kg, bd.wh_kg, "{:.1f}", " Wh/kg")]
+    # Charging headroom: an aqueous cell may not charge above the oxygen limit, so the voltage left between the
+    # cell's own voltage and that limit sets how much current it can be charged with, hence the stack size.
+    v_lim = 1.229 + t["use"]["oxygen_margin_v"]
+    vx, vd = sum(x.steps[:x.best_k]) / x.best_k, sum(r.steps[:r.best_k]) / r.best_k
+    rows.append(_ba_row(f"charging headroom below {v_lim:.2f} V", v_lim - vx, v_lim - vd, "{:.2f}", " V"))
+    if bx and bd:
+        rows += [_ba_row("battery: current density", bx.i_a_cm2, bd.i_a_cm2, "{:.3f}", " A/cm2"),
+                 _ba_row("battery: stack area", bx.area_m2, bd.area_m2, "{:,.0f}", " m2")]
     with st.expander(f"🔬 DFT-checked: every number before and after (first H2 {x.steps[0]:.2f} → {r.steps[0]:.2f} V)",
                      expanded=True):
-        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
-        st.caption("All numbers on this page use the DFT voltage. DFT is computed for the first hydrogen uptake "
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch", height=35 * (len(rows) + 1) + 3)
+        tight = min(v_lim - vx, v_lim - vd)
+        if bx and bd and tight < 0.3:
+            which = "DFT" if v_lim - vd < v_lim - vx else "xTB"
+            st.caption(f"⚠️ **Why the battery numbers move so much:** with the {which} voltage the cell sits only "
+                       f"{tight:.2f} V below the {v_lim:.2f} V limit above which charging splits the water "
+                       f"(1.229 V + the {t['use']['oxygen_margin_v']:.1f} V margin in targets.toml). Charging needs "
+                       "voltage above the cell's own to push current, so with little headroom the cell can only be "
+                       "charged slowly: the current density falls and the stack (and its platinum) must grow to "
+                       "deliver the same power. That, not the chemical, drives the build cost, weight and lifetime "
+                       "cost. Energy per kg of molecule counts the chemical alone and simply follows the voltage.")
+        st.caption("The switch at the top picks which of the two columns the rest of the page shows. DFT is computed for the first hydrogen uptake "
                    "only" + (f"; uptakes 2-{len(r.steps)} still use xTB." if len(r.steps) > 1 else ".")
                    + " The AI search keeps ranking on xTB voltages.")
 
@@ -1072,14 +1277,40 @@ def pair_before_after(pr, cfg_dft, kp: str):
                        f"Open the {missing[0]} molecule and press 'Verify with DFT' for a fully checked pair.")
 
 
+def mark_editor(smiles: str, kp: str):
+    """Tag and colour of a molecule, shown on every chart (a ring in the colour, the tag beside it)."""
+    cur = mol_marks().get(smiles) or {}
+    with st.popover(f"🏷 {cur.get('tag') or 'Tag / colour'}" if cur else "🏷 Tag / colour"):
+        st.caption("A tag (a name or an id) and a colour for this molecule: every chart rings it in the colour, "
+                   "with the tag beside it, including pairs and candidates that contain it.")
+        tag = st.text_input("Tag or id", value=cur.get("tag", ""), key=f"{kp}_mtag_{smiles}", max_chars=24,
+                            placeholder="e.g. lead-3, to make, A12")
+        col = st.color_picker("Colour", value=cur.get("color", MARK_COLOR), key=f"{kp}_mcol_{smiles}")
+        a_, b_ = st.columns(2)
+        apply_ = a_.button("Apply", key=f"{kp}_mset_{smiles}", type="primary", width="stretch")
+        clear_ = b_.button("Remove", key=f"{kp}_mdel_{smiles}", width="stretch", disabled=not cur)
+    if apply_ or clear_:
+        marks = dict(mol_marks())
+        if apply_:
+            marks[smiles] = {"tag": tag.strip(), "color": col}
+        else:
+            marks.pop(smiles, None)
+        SS["mol_marks"] = marks
+        save_settings_now()
+        # redraw the whole page so every chart shows it; the details window opens again on top
+        if kp == "mdlg":
+            SS["pending_dialog"] = ("molecule", [smiles])
+        st.rerun(scope="app")
+
+
 def render_molecule(smiles: str, kp: str, pin: bool = False):
-    r = dft_store().get(smiles) or next((x for x in view_pool("mol") + view_pool("pair")
+    r = dft_store(chosen=False).get(smiles) or next((x for x in view_pool("mol") + view_pool("pair")
                                                     if x.smiles == smiles), None) or M.evaluate(smiles)
-    steps = r.steps or [r.e0]
+    r_full = r                      # with the DFT voltage when one was computed (for the before/after table)
+    has_dft = bool(r.xtb_steps)
     sc = synthesis.estimate(r.smiles, t["synthesis"])
-    e_mean = sum(steps[:r.best_k]) / max(r.best_k, 1)
-    # header: picture | name, known/new, key numbers | ⭐ button
-    h0, h1, h2 = st.columns([1.1, 3, 1.1], vertical_alignment="top")
+    # header: picture | name, known/new, DFT and ⭐ buttons, key numbers
+    h0, h1 = st.columns([1.1, 4.1], vertical_alignment="top")
     try:
         from rdkit import Chem
         from rdkit.Chem import Draw
@@ -1087,9 +1318,46 @@ def render_molecule(smiles: str, kp: str, pin: bool = False):
     except Exception:
         pass
     with h1:
-        st.markdown(f"**{r.smiles}**  ·  {r.mw:.0f} g/mol  ·  takes up to {len(steps)} H2, uses {r.best_k}")
+        title_ = st.empty()         # filled below, once the xTB / DFT switch has picked the values
         novelty_banner("molecule", [r.smiles])
-        dft_check(r, kp)
+        b1, b2 = st.columns(2, vertical_alignment="top")
+        with b1:
+            dft_check(r_full, kp)
+        level = "dft"
+        if has_dft:
+            # the DFT result lives in the energy cache, not in the job list, so it stays here when a
+            # finished job is removed from that list
+            level = mol_level(r.smiles)
+            pick = st.segmented_control(
+                "Values from", ["dft", "xtb"], default=level, key=f"{kp}_level_{r.smiles}", required=True,
+                format_func=lambda v: {"dft": "🔬 DFT (first principles)", "xtb": "⚡ xTB (fast search)"}[v],
+                help="Every number on this page (voltage, energy, battery, cost, build options) with the voltage "
+                     "of the first hydrogen uptake from DFT or from the fast xTB search. The before/after table "
+                     "shows both side by side; the charts and tables of the page follow this switch too.") or level
+            if pick != level:
+                # remember it for this molecule and redraw the whole page, so its dot moves on the charts;
+                # the details window is opened again on top
+                SS["mol_level"] = {**(SS.get("mol_level") or {}), r.smiles: pick}
+                save_settings_now()
+                if kp == "mdlg":
+                    SS["pending_dialog"] = ("molecule", [r.smiles])
+                st.rerun(scope="app")
+            if level == "xtb":
+                r = M.xtb_version(r_full)
+        steps = r.steps or [r.e0]
+        e_mean = sum(steps[:r.best_k]) / max(r.best_k, 1)
+        mk_ = mol_marks().get(r.smiles)
+        badge_ = ""
+        if mk_:
+            col_ = mk_.get("color") or MARK_COLOR
+            badge_ = (f'  <span style="border:2px solid {col_};color:{col_};border-radius:10px;padding:0 8px;'
+                      f'font-weight:600">🏷 {html.escape(mk_.get("tag") or "marked")}</span>')
+        title_.markdown(f"**{r.smiles}**  ·  {r.mw:.0f} g/mol  ·  takes up to {len(steps)} H2, uses {r.best_k}"
+                        + badge_, unsafe_allow_html=True)
+        mark_editor(r.smiles, kp)
+        if pin:
+            with b2:
+                pin_button("molecule", [r.smiles], kp)
         c = st.columns(5)
         c[0].metric("Voltage (used)", f"{e_mean:.2f} V", help="Average of the hydrogen uptakes used, V vs SHE.")
         c[1].metric("Solubility", f"{r.solubility_mol_l:.2f} M", help="ESOL estimate.")
@@ -1097,15 +1365,12 @@ def render_molecule(smiles: str, kp: str, pin: bool = False):
         c[3].metric("Must cost <", f"${pairs.CHEMICAL_SHARE * LI['usd_kwh_stationary'] / pairs.kg_per_kwh(r.mw, max(e_mean, 0.05), 2 * r.best_k):.1f}/kg",
                     help="Price per kg above which the chemical alone costs more than a lithium-ion pack's share.")
         c[4].metric("Est. price", f"${sc.usd_kg:,.0f}/kg", help=sc.describe())
-    if pin:
-        with h2:
-            pin_button("molecule", [r.smiles], kp)
     if r.notes:
         st.warning("; ".join(r.notes))
-    dft_v = r.steps[0] if r.xtb_steps else None
-    cfgs = molecule_options(tkey(t), r.smiles, "dft", dft_v)
-    if r.xtb_steps:
-        dft_before_after(r, cfgs, kp)
+    dft_v = r_full.steps[0] if has_dft else None
+    cfgs = molecule_options(tkey(t), r.smiles, level, dft_v)
+    if has_dft:
+        dft_before_after(r_full, cfgs if level == "dft" else molecule_options(tkey(t), r.smiles, "dft", dft_v), kp)
     tb = st.tabs(["⚡ vs lithium-ion", "💰 Cost breakdown", "🔧 Build options", "🧪 Chemistry"])
     with tb[3]:
         a_, b_ = st.columns([3, 2])
@@ -1126,7 +1391,7 @@ def render_molecule(smiles: str, kp: str, pin: bool = False):
                    "Build options.")
 
         def at_(sc_, sm=r.smiles):
-            cf_ = molecule_options(tkey(targets_at(sc_)), sm, "dft", dft_v)
+            cf_ = molecule_options(tkey(targets_at(sc_)), sm, level, dft_v)
             return min(cf_, key=lambda x: x.lcos_usd_kwh) if cf_ else None
         li_metrics(best, kp, at=at_, kind="molecule", ids=[r.smiles], name=r.smiles)
     with tb[1]:
@@ -1327,7 +1592,7 @@ def view_pool(kp: str) -> list:
             out = []
             for d_ in rec.get("molecules", []):
                 try:
-                    out.append(M.with_dft(M.MolResult(**d_)))
+                    out.append(as_chosen(M.with_dft(M.MolResult(**d_))))
                 except TypeError:
                     continue
             return out
@@ -1344,9 +1609,9 @@ def library_snapshot() -> list:
         return list(dft_store().values())
     sig = tuple(len(c.history) for c in ctls)
     if SS.get("snap_sig") != sig or "snap_pool" not in SS:
-        SS["snap_pool"] = list(dft_store().values())
+        SS["snap_pool"] = list(dft_store(chosen=False).values())
         SS["snap_sig"] = sig
-    return SS["snap_pool"]
+    return [as_chosen(x) for x in SS["snap_pool"]]   # the details switch applies at once, even mid-search
 
 
 def funnel_text(ctl, library: int, unit: str = "molecules") -> str:
@@ -1482,8 +1747,13 @@ def live_progress(mode: str, kp: str):
         f.update_layout(xaxis_title="generation", yaxis_title=unit, height=380, legend=dict(orientation="h", y=-0.3),
                         title="Search progress vs lithium-ion: every molecule computed, by generation (click to open)")
         f.update_xaxes(dtick=1)
-        evg = st.plotly_chart(f, width="stretch", on_select="rerun", selection_mode="points", key=ck(f"{kp}_prog"))
+        evg = st.plotly_chart(f, width="stretch", on_select="rerun", selection_mode=("points", "box", "lasso"),
+                              key=ck(f"{kp}_prog"))
         take(evg, f"{kp}_prog", kind)
+        if mode != "pair":
+            st.caption("Click a dot to open it; drag to move around the chart. To run DFT for several dots, pick the "
+                       "box or lasso select tool above the chart and draw around them; zoom with the magnifier.")
+            multi_dft_bar(f"{kp}_prog")
     if not SS.get("_full_run") and SS.get("pending_dialog"):
         st.rerun(scope="app")            # progress chart clicked during a panel refresh
 
@@ -3045,9 +3315,6 @@ def mol_settings():
 
 
 def molecule_h2_tab():
-    st.write("A genetic algorithm writes new molecules (SELFIES mutations and crossovers); a machine-learning "
-             "model predicts which are worth computing; GFN2-xTB quantum chemistry computes their voltage with "
-             "hydrogen; the model learns from every result. Molecules not in PubChem have never been reported.")
     st.fragment(mol_settings)()
     search_panel("positive", "mol")
     best_so_far("positive", "mol")
@@ -3057,7 +3324,7 @@ def molecule_h2_tab():
                "molecule's details.")
     if v2.button("Verify the 10 best with DFT", key="mol_verify10", width="stretch"):
         launch_verify(["--top", 10])
-        st.toast("DFT started for the 10 best molecules: follow it under '🔬 Background DFT' in the sidebar.")
+        st.toast("DFT started for the 10 best molecules: follow it under '🔬 Background DFT' at the bottom of the page.")
     store = {r.smiles: r for r in view_pool("mol")}
     if store:
         mol = pd.DataFrame([{"molecule": r.smiles, "reduced form": r.reduced, "E V vs SHE": round(r.e0, 3),
@@ -3089,8 +3356,12 @@ def molecule_h2_tab():
         add_new_rings(sc, _nw["E V vs SHE"], _nw["Wh/L electrolyte"], _nw[["molecule"]].values, size=24)
         sc.add_hline(y=LI["wh_l"], line_dash="dash", line_color="red",
                      annotation_text=f"Li-ion car pack {LI['wh_l']:.0f} Wh/L")
-        evm = st.plotly_chart(sc, width="stretch", on_select="rerun", selection_mode="points", key=ck("molsc"))
+        evm = st.plotly_chart(sc, width="stretch", on_select="rerun", selection_mode=("points", "box", "lasso"),
+                              key=ck("molsc"))
         take(evm, "molsc", "molecule")
+        st.caption("Drag to move around the chart. To run DFT for several dots, pick the box or lasso select tool "
+                   "above the chart and draw around them; zoom with the magnifier above the chart.")
+        multi_dft_bar("molsc")
         st.caption("Click 🔍 open (or any cell of a row) to see the molecule and its details. Wh/L of electrolyte is an upper bound: the full "
                    "battery (stack, hydrogen storage, case) holds less. Each molecule's details show it as a full battery "
                    "against lithium-ion; ⭐ adds it to your candidates, compared in every tab.")
@@ -3179,24 +3450,37 @@ BATTERY_TYPES = {
             "its own tank, so the battery can be recharged."),
 }
 
+def how_it_works(kind: str):
+    """The animation panel. The discharge / charge switch is inside the animation page, so switching is instant
+    (it runs in the browser, not on the server)."""
+    with st.container(border=True):
+        st.markdown(f"**How it works: {BATTERY_TYPES[kind][0].lower()}**")
+        draw_ = {"molecule": animation.molecule_h2_html, "pair": animation.two_tank_html,
+                 "gas": animation.two_gas_html}[kind]
+        st.iframe(animation.switchable_html(draw_, height=580), height=580)
+
+
 if TAB_NOW == TAB_NAMES[0]:
     st.caption("Three ways to build a battery that moves hydrogen. In each one an AI proposes new molecules, "
                "quantum chemistry (GFN2-xTB) checks them, and the best ones are sized against lithium-ion.")
     default("cfg_kind", "molecule")
     if SS.get("cfg_kind") not in BATTERY_TYPES:
         SS["cfg_kind"] = "molecule"
-    kind_ = st.radio("Battery type", list(BATTERY_TYPES), key="cfg_kind", horizontal=True,
-                     format_func=lambda k: BATTERY_TYPES[k][0], captions=[v[1] for v in BATTERY_TYPES.values()])
+    left_, right_ = st.columns([2, 4.1], gap="large")  # animation column 12 % wider than at [2, 3]
+    # the left column fills the row's height, so the explanation can sit at its bottom, level with the panel
+    left_ = left_.container(height="stretch")
+    kind_ = left_.radio("Battery type", list(BATTERY_TYPES), key="cfg_kind",
+                        format_func=lambda k: BATTERY_TYPES[k][0], captions=[v[1] for v in BATTERY_TYPES.values()])
+    if kind_ == "molecule":
+        left_.space("stretch")
+        left_.write("A genetic algorithm writes new molecules (SELFIES mutations and crossovers); a machine-learning "
+                    "model predicts which are worth computing; GFN2-xTB quantum chemistry computes their voltage with "
+                    "hydrogen; the model learns from every result. Molecules not in PubChem have never been reported.")
     # save at once: the gas view takes a while to finish, and a reload before the end of the run
     # would otherwise lose the choice (settings are normally saved at the end of each run)
     runs.save_settings({k: SS[k] for k in SETTING_KEYS if k in SS})
-    with st.expander(f"How it works: {BATTERY_TYPES[kind_][0].lower()} (animation)", expanded=False):
-        anim_mode = st.radio("Show", ["discharge", "charge"], horizontal=True, key=f"anim_mode_{kind_}",
-                             format_func=lambda m: {"discharge": "Discharging (gives power)",
-                                                    "charge": "Charging (stores power)"}[m])
-        draw_ = {"molecule": animation.molecule_h2_html, "pair": animation.two_tank_html,
-                 "gas": animation.two_gas_html}[kind_]
-        st.iframe(draw_(anim_mode, height=540), height=540)
+    with right_:
+        how_it_works(kind_)
     st.divider()
     {"molecule": molecule_h2_tab, "pair": two_molecule_tab, "gas": gas_tab}[kind_]()
 
@@ -3266,6 +3550,14 @@ if TAB_NOW == TAB_NAMES[3]:
              "tests it (see below).")
     validation_section()
 
+
+# background DFT runs: below the page, under whichever tab is open
+st.divider()
+from h2screener import dftjobs as _DJ
+if any(j.get("status") in ("starting", "running") for j in _DJ.list_jobs()) or _DJ.untracked_processes():
+    st.fragment(dft_panel, run_every=10)()
+else:
+    dft_panel()
 
 open_pending_dialog()
 SS["_full_run"] = False

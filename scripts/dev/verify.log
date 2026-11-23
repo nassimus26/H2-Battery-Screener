@@ -1,0 +1,106 @@
+1 molecules, 5 calculations
+[1/3] O                                        ok      5 s
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+1 molecules, 5 calculations
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+[2/3] NC(=O)C(=O)C=CC(=O)C=O                   ok   1342 s
+[3/3] NC(=O)C(O)=CC=C(O)C=O                    ok   1365 s
+NC(=O)C(=O)C=CC(=O)C=O xTB 0.614 DFT 0.5400650768291358
+  water: NC(=O)C(=O)C=CC(=O)C=O no reaction with water found by the templates
+  water: NC(=O)C(O)=CC=C(O)C=O no reaction with water found by the templates
+done
+[1/2] NC(=O)C(=O)C=CC(=O)C=O                   ok   1322 s
+[2/2] NC(=O)C(O)=CC=C(O)C=O                    ok   1351 s
+NC(=O)C(=O)C=CC(=O)C=O xTB 0.614 DFT 0.5400650768291358
+  water: NC(=O)C(=O)C=CC(=O)C=O no reaction with water found by the templates
+  water: NC(=O)C(O)=CC=C(O)C=O no reaction with water found by the templates
+done
+1 molecules, 5 calculations
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+1 molecules, 5 calculations
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+1 molecules, 5 calculations
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+Traceback (most recent call last):
+  File "/Users/mk/StudioProjects/h2-screener/scripts/verify_molecules.py", line 97, in <module>
+    main()
+  File "/Users/mk/StudioProjects/h2-screener/scripts/verify_molecules.py", line 24, in main
+    run(store, args, job)
+  File "/Users/mk/StudioProjects/h2-screener/scripts/verify_molecules.py", line 51, in run
+    for _, prods in S.products(x):
+                    ^^^^^^^^^^^^^
+  File "/Users/mk/StudioProjects/h2-screener/h2screener/stability.py", line 36, in products
+    m = Chem.AddHs(Chem.MolFromSmiles(smiles))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Boost.Python.ArgumentError: Python argument types in
+    rdkit.Chem.rdmolops.AddHs(NoneType)
+did not match C++ signature:
+    AddHs(RDKit::ROMol mol, bool explicitOnly=False, bool addCoords=False, boost::python::api::object onlyOnAtoms=None, bool addResidueInfo=False)
+    AddHs(RDKit::ROMol mol, RDKit::MolOps::AddHsParameters params, boost::python::api::object onlyOnAtoms=None)
+3 molecules, 9 calculations
+6 calculations to run (others cached), 6 at a time
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/.local/share/uv/python/cpython-3.12.15-macos-aarch64-none/lib/python3.12/multiprocessing/resource_tracker.py:279: UserWarning: resource_tracker: There appear to be 5 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
+3 molecules, 9 calculations
+6 calculations to run (others cached), 6 at a time
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+/Users/mk/StudioProjects/h2-screener/.venv/lib/python3.12/site-packages/pyscf/lib/misc.py:219: UserWarning: OpenMP is not available. Setting omp_threads to 12 has no effects.
+  warnings.warn('OpenMP is not available. '
+[1/6] O=CC#CC(=O)NC(=O)C=O                     ok    818 s
+[2/6] O=CC(=O)NC(O)=C=C=CO                     ok    912 s
+[3/6] OCC1=NNc2nnncc2N1                        ok   1441 s
+[4/6] O=CC1N=c2cnnnc2=NN1                      ok   1602 s
+[5/6] O=CNC(=O)c1nnnc2c1NCN2                   ok   1833 s
+[6/6] O=CNC(=O)c1nnnc2c1=NCN=2                 ok   1875 s
+O=CNC(=O)c1nnnc2c1=NCN=2 xTB 1.0 DFT 1.5356650516118577
+  water: O=CNC(=O)c1nnnc2c1=NCN=2 no reaction with water found by the templates
+  water: O=CNC(=O)c1nnnc2c1NCN2 no reaction with water found by the templates
+O=CC1N=c2cnnnc2=NN1 xTB 0.83 DFT 1.4118287493742283
+  water: O=CC1N=c2cnnnc2=NN1 no reaction with water found by the templates
+  water: OCC1=NNc2nnncc2N1 no reaction with water found by the templates
+O=CC#CC(=O)NC(=O)C=O xTB 0.919 DFT 0.008030014580113858
+  water: O=CC#CC(=O)NC(=O)C=O no reaction with water found by the templates
+  water: O=CC(=O)NC(O)=C=C=CO no reaction with water found by the templates
+done

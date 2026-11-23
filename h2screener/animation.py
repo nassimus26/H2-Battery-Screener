@@ -209,3 +209,39 @@ def two_gas_html(mode: str = "discharge", height: int = 400) -> str:
  Nothing leaves the battery: every gas and the water are kept, so the same cell can be charged again
  ({'it now works as an electrolyser' if rev else 'it works as a fuel cell'}). Energy is set by the tanks; power by the cell area."""
     return _page(svg, legend, height, view_h=410, aria="Sealed gas battery: fuel and oxidant gas tanks, a cell and a water tank")
+
+
+def switchable_html(draw, height: int = 480) -> str:
+    """Both modes of one animation in a single page, with the discharge / charge switch in the page itself:
+    switching happens in the browser, instantly, with no round trip to the server. Only one drawing is in the
+    page at a time (the other waits in a <template>), so the SVG ids (pipe paths the dots follow) never clash."""
+    def body(mode):
+        page = draw(mode, height=height - 36)
+        return page[page.index("<body>") + 6:page.index("</body>")]
+    head = draw("discharge", height=height - 36)
+    style = head[head.index("<style>") + 7:head.index("</style>")]
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{style}
+.sw2{{display:flex;gap:22px;padding:4px 4px 10px;font-size:14px;color:#e5e7eb}}
+.sw2 label{{cursor:pointer;display:flex;align-items:center;gap:6px}}
+.sw2 input{{accent-color:#ff4b4b;margin:0;cursor:pointer}}
+</style></head><body>
+<div class="sw2" role="radiogroup" aria-label="Show">
+ <label><input type="radio" name="m" value="discharge" checked>Discharging (gives power)</label>
+ <label><input type="radio" name="m" value="charge">Charging (stores power)</label>
+</div>
+<div id="view"></div>
+<template id="t-discharge">{body("discharge")}</template>
+<template id="t-charge">{body("charge")}</template>
+<script>
+const show = m => {{
+  document.getElementById("view").innerHTML = document.getElementById("t-" + m).innerHTML;
+  try {{ sessionStorage.setItem("h2anim:{draw.__name__}", m); }} catch (e) {{}}
+}};
+let m0 = "discharge";
+try {{ m0 = sessionStorage.getItem("h2anim:{draw.__name__}") || m0; }} catch (e) {{}}
+document.querySelectorAll('input[name=m]').forEach(i => {{
+  i.checked = i.value === m0;
+  i.addEventListener("change", () => show(i.value));
+}});
+show(m0);
+</script></body></html>"""
