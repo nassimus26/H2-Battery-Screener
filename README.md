@@ -152,6 +152,10 @@ They check whether the physics and the assumed ranges cover reality:
 4. Active learning: choose the next candidate to compute where the expected
    gain in score is largest.
 
+## Author
+
+Nassim MOUALEK (nmoualek@gmail.com)
+
 ## License
 
 The code is released under the [MIT License](LICENSE). Third-party data keeps
