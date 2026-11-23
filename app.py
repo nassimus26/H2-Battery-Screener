@@ -172,7 +172,62 @@ def restore_settings(rec: dict):
             SS[k] = v
 
 
+def _dur(sec) -> str:
+    sec = int(max(sec, 0))
+    return f"{sec // 3600} h {sec % 3600 // 60:02d} min" if sec >= 3600 else f"{sec // 60} min {sec % 60:02d} s"
+
+
+def dft_panel():
+    """Background DFT jobs with their progress (sidebar; refreshes itself while one runs)."""
+    import time as _t
+    from h2screener import dftjobs as _J
+    jobs = [j for j in _J.list_jobs() if j.get("status") in ("starting", "running")
+            or _t.time() - (j.get("finished") or j.get("updated") or 0) < 24 * 3600]
+    extra = _J.untracked_processes()
+    if not jobs and not extra:
+        return
+    running = [j for j in jobs if j.get("status") in ("starting", "running")] + extra
+    with st.expander(f"🔬 Background DFT: {len(running)} running" if running else "🔬 Background DFT: done",
+                     expanded=bool(running)):
+        for j in jobs:
+            mols = j.get("molecules") or []
+            name = ", ".join(m if len(m) <= 28 else m[:26] + "…" for m in mols[:3]) + (f" +{len(mols) - 3}" if len(mols) > 3 else "")
+            st_ = j.get("status")
+            if st_ in ("starting", "running"):
+                total, done = j.get("total"), j.get("done", 0)
+                el = _t.time() - j["started"]
+                eta = _J.eta_seconds(j)
+                st.markdown(f"**{name or 'preparing…'}**")
+                if total:
+                    st.progress(done / total, text=f"{done} of {total} calculations · {_dur(el)} so far")
+                else:
+                    st.progress(0.0, text=f"preparing the calculations · {_dur(el)} so far")
+                st.caption(("about " + _dur(eta) + " left" if eta is not None else
+                            "10-30 min per molecule; the first finished calculation gives an estimate")
+                           + (f" · last: {j['current'][:60]}" if j.get("current") else ""))
+            elif st_ == "finished":
+                res = j.get("results") or {}
+                lines = [f"{m[:28]}: {v['xtb']:.2f} → **{v['dft']:.2f} V**" if v.get("dft") is not None
+                         else f"{m[:28]}: DFT failed" for m, v in res.items()]
+                st.markdown(f"✅ finished {_t.strftime('%H:%M', _t.localtime(j['finished']))} (xTB → DFT)  \n"
+                            + "  \n".join(lines or [name]))
+                for m in list(res)[:3]:
+                    if st.button(f"Open {m[:24]}", key=f"dftopen_{j['id']}_{m}", width="stretch"):
+                        SS["pending_dialog"] = ("molecule", [m])
+                        st.rerun(scope="app")
+            else:
+                st.markdown(f"⚠️ **{name}**: {st_} ({j.get('current') or 'no detail'})")
+        for p_ in extra:
+            st.markdown(f"**{p_['script']}** {p_['args'][:40]}")
+            st.caption(f"running since {p_['started']} (started before progress tracking: no estimate)")
+
+
 with st.sidebar:
+    from h2screener import dftjobs as _DJ
+    if any(j.get("status") in ("starting", "running") for j in _DJ.list_jobs()) or _DJ.untracked_processes():
+        st.fragment(dft_panel, run_every=10)()
+    else:
+        dft_panel()
     st.header("What to build")
     default("cfg_preset", list(PRESETS)[0])
     preset = st.selectbox("Use", list(PRESETS), key="cfg_preset", on_change=apply_preset)
@@ -894,10 +949,14 @@ def launch_verify(args: list) -> None:
     """Start a first-principles (DFT) recomputation in a separate background process."""
     import subprocess
     import sys as _sys
+    from h2screener import dftjobs as _J
     log = ROOT / "scripts" / "dev" / "verify.log"
     log.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen([_sys.executable, str(ROOT / "scripts" / "verify_molecules.py"), *map(str, args)], cwd=str(ROOT),
-                     stdout=open(log, "a"), stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+    job = _J.new_job([str(a) for a in args if not str(a).startswith("--") and not str(a).isdigit()])
+    proc = subprocess.Popen([_sys.executable, str(ROOT / "scripts" / "verify_molecules.py"), "--job", job,
+                             *map(str, args)], cwd=str(ROOT), stdout=open(log, "a"), stderr=subprocess.STDOUT,
+                            stdin=subprocess.DEVNULL, start_new_session=True)
+    _J.update(job, pid=proc.pid)
 
 
 def launch_gas_fp() -> None:
@@ -923,7 +982,7 @@ def dft_check(r, kp: str):
                    "The numbers on this page use the DFT voltage.")
     elif st.button("🔬 Verify with DFT (10-30 min, in the background)", key=f"{kp}_dft"):
         launch_verify([r.smiles])
-        st.toast("DFT started in the background: reopen this molecule later to see the result.")
+        st.toast("DFT started in the background: follow it under '🔬 Background DFT' at the top of the sidebar.")
 
 
 def stability_table(r):
@@ -1122,10 +1181,59 @@ def render_pair(pr, kp: str):
 
 
 
+def unfinished_run(mode: str):
+    """The latest saved search of this mode that stopped before its last generation (app restart,
+    Stop, failure), with the number of generations left; (None, 0) when there is none."""
+    for rec in runs.list_runs(mode):
+        st_ = str(rec.get("status", ""))
+        if st_ in ("running", "paused"):
+            continue                                       # the one running now
+        left = int((rec.get("search") or {}).get("generations", 0)) - len(rec.get("history") or [])
+        if (st_.startswith("interrupted") or st_ in ("stopped", "failed")) and left > 0:
+            return rec, left
+        return None, 0                                     # only the latest search can be resumed
+    return None, 0
+
+
+def resume_run(mode: str, kp: str, rec: dict, left: int):
+    """Continue a saved search: same settings and record, the generations it had left. Molecules it
+    computed are put back into the library if a reset removed them."""
+    ctl = search_controls()[mode]
+    store = ai_search.load_store()
+    back = 0
+    for d_ in rec.get("molecules", []):
+        if d_.get("smiles") and d_["smiles"] not in store:
+            try:
+                store[d_["smiles"]] = M.MolResult(**d_)
+                back += 1
+            except TypeError:
+                continue
+    if back:
+        ai_search.save_store(store)
+    ctl.history[:] = list(rec.get("history") or [])
+    kw = dict(rec.get("search") or {}, generations=left, seed=len(ctl.history))
+    rid = rec["id"]
+    ctl.on_update = lambda c, store_, rid=rid: runs.update_run(rid, c, store_)
+    ai_search.start_background(ctl, mode=mode, **kw)
+    ctl.evaluated = [d_["smiles"] for d_ in rec.get("molecules", []) if d_.get("smiles")] + ctl.evaluated
+    runs.update_run(rid, ctl, ai_search.load_store())
+    SS[f"{kp}_view_run"] = None
+
+
 def search_buttons(mode: str, kw: dict, kp: str):
     """Start / Pause-Resume / Stop / Reset on one line (inside the settings fragment: every press reruns the page)."""
     ctl = search_controls()[mode]
     running = ctl.thread is not None and ctl.thread.is_alive()
+    if not running:
+        rec_, left_ = unfinished_run(mode)
+        if rec_:
+            done_ = len(rec_.get("history") or [])
+            st.info(f"The search started {rec_.get('started', rec_['id'])} stopped after {done_} of "
+                    f"{done_ + left_} generations ({rec_['status']}).")
+            if st.button(f"▶ Resume it: the {left_} generation{'s' if left_ > 1 else ''} left, same settings",
+                         type="primary", key=f"{kp}_resume_run", width="stretch"):
+                resume_run(mode, kp, rec_, left_)
+                st.rerun(scope="app")
     b1, b2, b3, b4 = st.columns(4)
     if b1.button("Start", type="primary", disabled=running, key=f"{kp}_start", width="stretch"):
         ctl.history.clear()
@@ -1299,21 +1407,28 @@ def live_progress(mode: str, kp: str):
     elif ctl.status in ("running", "paused"):
         st.caption(f"{len(ctl.history)} generation(s) completed. This run started before progress tracking was "
                    "added; the next run shows the progress bar and time left.")
-    if ctl.history:
+    hist, past = ctl.history, None
+    if not hist and ctl.status not in ("running", "paused"):
+        # nothing running in this app session: show the latest saved search instead of no chart
+        past = next((r_ for r_ in runs.list_runs(mode) if r_.get("history")), None)
+        hist = past["history"] if past else []
+    if past:
+        st.caption(f"Showing the last saved search ({past['id']}, {past['status']}); start a search to follow a new one.")
+    if hist:
         unit = "Wh per litre of both liquids" if mode == "pair" else "Wh per litre of charged electrolyte (liquid only)"
         kind = "pair" if mode == "pair" else "molecule"
         fallback = None
-        if any(not h.get("best_id") for h in ctl.history):     # runs from before best_id was recorded
+        if any(not h.get("best_id") for h in hist):     # runs from before best_id was recorded
             if mode == "pair":
                 bp = pairs.best_pairs(view_pool("pair"), 1)
                 fallback = [bp[0].neg.smiles, bp[0].pos.smiles] if bp else None
             else:
                 top = max(view_pool("mol"), key=lambda r: r.objective, default=None)
                 fallback = [top.smiles] if top else None
-        ids = [h.get("best_id") or fallback for h in ctl.history]
+        ids = [h.get("best_id") or fallback for h in hist]
         keep = [i for i, x in enumerate(ids) if x]
-        gx = [ctl.history[i]["generation"] for i in keep]
-        gy = [ctl.history[i]["best"] for i in keep]
+        gx = [hist[i]["generation"] for i in keep]
+        gy = [hist[i]["best"] for i in keep]
         f = go.Figure()
         # every molecule computed in each generation (grey), then the best so far (blue)
         pool_ = {r.smiles: r for r in dft_store().values()}
@@ -1328,7 +1443,7 @@ def live_progress(mode: str, kp: str):
             val = {k: (r.wh_l if math.isfinite(r.wh_l) else 0.0) for k, r in pool_.items()}
             usable_ = {k for k, r in pool_.items() if r.objective > 0 and not pairs._unstable(k)}
             best_v, best_s, gx, gy, ids, keep = 0.0, None, [], [], [], []
-            for h in ctl.history:
+            for h in hist:
                 for m_ in h.get("ids") or []:
                     if m_ in usable_ and val[m_] > best_v:
                         best_v, best_s = val[m_], m_
@@ -1340,7 +1455,7 @@ def live_progress(mode: str, kp: str):
         import random as _r
         _rg = _r.Random(0)
         ax_, ay_, ac_ = [], [], []
-        for h in ctl.history:
+        for h in hist:
             for m_ in h.get("ids") or []:
                 if m_ in pool_:
                     ax_.append(h["generation"] + _rg.uniform(-0.3, 0.3))
@@ -2942,7 +3057,7 @@ def molecule_h2_tab():
                "molecule's details.")
     if v2.button("Verify the 10 best with DFT", key="mol_verify10", width="stretch"):
         launch_verify(["--top", 10])
-        st.toast("DFT started in the background for the 10 best molecules.")
+        st.toast("DFT started for the 10 best molecules: follow it under '🔬 Background DFT' in the sidebar.")
     store = {r.smiles: r for r in view_pool("mol")}
     if store:
         mol = pd.DataFrame([{"molecule": r.smiles, "reduced form": r.reduced, "E V vs SHE": round(r.e0, 3),
