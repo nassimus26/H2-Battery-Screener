@@ -427,12 +427,45 @@ def ck(key: str) -> str:
     return f"{key}_{st.session_state.get(f'nonce_{key}', 0)}"
 
 
-def _points(event):
+def _selection(event):
+    """The selection of a chart or table event, or of its saved widget state (a dict)."""
     try:
-        sel = event.selection
+        return event.get("selection", {}) if isinstance(event, dict) else event.selection
+    except Exception:
+        return {}
+
+
+def _points(event):
+    sel = _selection(event)
+    try:
         return sel.get("points", []) if isinstance(sel, dict) else getattr(sel, "points", [])
     except Exception:
         return []
+
+
+def consume_waiting_clicks():
+    """Handle a click a chart or table holds BEFORE that chart is drawn again.
+    Plotly keeps a clicked point selected; if the chart is redrawn with the same
+    key, the next click on that point un-selects it (nothing opens: two clicks
+    needed). Taking the click here moves the chart to a new key, so it is drawn
+    fresh with nothing selected. The pop-up itself opens at the end of the page
+    run, when everything it uses is defined."""
+    SS["_defer_open"] = True
+    try:
+        _consume_clicks()
+    finally:
+        SS["_defer_open"] = False
+
+
+def _consume_clicks():
+    for k in CLICKABLE:
+        state = SS.get(ck(k))
+        how = SS.get(f"how_{k}")
+        if not state or not how:
+            continue
+        fn, kind = how
+        {"take": lambda: take(state, k, kind), "take_any": lambda: take_any(state, k),
+         "take_row": lambda: take_row(state, k, kind), "take_row_any": lambda: take_row_any(state, k)}[fn]()
 
 
 NEW_RING = "#ffd400"
@@ -458,6 +491,7 @@ def add_new_rings(fig, xs, ys, cds, size=20, width=3):
 def take(event, key: str, kind: str):
     """A chart was clicked: remember which candidate; the pop-up opens at the
     end of the page run. The chart is redrawn unselected next time."""
+    SS[f"how_{key}"] = ("take", kind)
     pts = _points(event)
     if pts:
         SS[f"nonce_{key}"] = SS.get(f"nonce_{key}", 0) + 1     # always consume the click
@@ -469,6 +503,7 @@ def take(event, key: str, kind: str):
 
 def take_any(event, key: str):
     """Like take(), for charts that mix kinds: each point's customdata is [kind, *ids]."""
+    SS[f"how_{key}"] = ("take_any", None)
     pts = _points(event)
     if pts:
         SS[f"nonce_{key}"] = SS.get(f"nonce_{key}", 0) + 1
@@ -480,8 +515,9 @@ def take_any(event, key: str):
 
 def take_row_any(event, key: str):
     """A table row was clicked in a table that mixes kinds: SS['rows_<key>'] holds [kind, *ids] per row."""
+    SS[f"how_{key}"] = ("take_row_any", None)
     try:
-        sel = event.selection
+        sel = _selection(event)
         rows = sel.get("rows", []) if isinstance(sel, dict) else getattr(sel, "rows", [])
         if not rows:                                   # a click on a cell counts as a click on its row
             cells = sel.get("cells", []) if isinstance(sel, dict) else getattr(sel, "cells", [])
@@ -498,8 +534,9 @@ def take_row_any(event, key: str):
 
 
 def take_row(event, key: str, kind: str):
+    SS[f"how_{key}"] = ("take_row", kind)
     try:
-        sel = event.selection
+        sel = _selection(event)
         rows = sel.get("rows", []) if isinstance(sel, dict) else getattr(sel, "rows", [])
         if not rows:                                   # a click on a cell counts as a click on its row
             cells = sel.get("cells", []) if isinstance(sel, dict) else getattr(sel, "cells", [])
@@ -527,7 +564,7 @@ def open_now():
     kind, v = pend
     st.toast(f"Opening the {DIALOG_WHAT.get(kind, kind)} {' | '.join(str(x) for x in v[:2])}... "
              "(computing its details, a few seconds)", icon="⏳")
-    if SS.get("_full_run"):
+    if SS.get("_full_run") and not SS.get("_defer_open"):
         open_pending_dialog()
 
 
@@ -1366,6 +1403,7 @@ def pair_dialog(neg: str, pos: str):
             render_pair(pr, "pdlg")
 
 
+consume_waiting_clicks()                     # before any chart is drawn: see the function
 st.title("Hydrogen battery simulator")
 st.caption("Candidates come from thermodynamic data and physical laws; every result is compared with the "
            "lithium-ion packs in current cars (Tesla NMC/NCA, BYD Blade LFP).")
