@@ -7,6 +7,13 @@ An AI search (genetic algorithm + machine-learning surrogate + quantum chemistry
 proposes new molecules, and every candidate is sized as a whole battery and
 compared with lithium-ion.
 
+![Trade-offs tab: every candidate sized as a whole battery, build price per kWh against energy per kg, with today's lithium-ion packs as red stars and the zone that beats them in green](docs/images/tradeoffs.png)
+
+*Trade-offs tab: every candidate of every battery type, sized as a whole battery
+for a 75 kWh car pack. Build price (USD/kWh, log scale) against energy per kg;
+red stars are today's lithium-ion packs, the green zone is lighter and cheaper
+than them.*
+
 ## Status and findings
 
 The project is paused and published as is. In short:
