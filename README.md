@@ -1,4 +1,4 @@
-# h2-screener
+# H2-Battery-Screener
 
 Finds and ranks rechargeable cells that use hydrogen as one electrode. It works
 from thermodynamic data and physical laws, not from lists of known batteries:
