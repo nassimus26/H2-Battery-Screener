@@ -1,10 +1,10 @@
-Mon Nov 23 04:51:48 CET 2026
+Mon Nov 23 15:39:11 CET 2026
 uv: /Users/mk/.local/bin/uv
-Checked 1 package in 2ms
-Uninstalled 1 package in 2ms
- - pyscf-dispersion==1.0.0
+Checked 1 package in 16ms
+warning: Skipping pyscf-dispersion as it is not installed
+warning: No packages to uninstall
 pyscf 2.15.0 arm64 cpus 18
 SMD available
 dispersion missing No module named 'pyscf.dispersion'
-water wB97X-V/def2-TZVP -76.43097108243205 8.4s
+water wB97X-V/def2-TZVP -76.43097108243205 8.3s
 exit 0

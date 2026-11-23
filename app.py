@@ -140,7 +140,7 @@ _DG._chart_hooks = (horizontal_axis_titles, mark_points)
 st.plotly_chart = lambda *a, **k: _DG.plotly_chart(st._main, *a, **k)
 
 ROOT = Path(__file__).resolve().parent
-st.set_page_config(page_title="Hydrogen battery simulator", layout="wide")
+st.set_page_config(page_title="Rechargeable Battery AI Explorer", layout="wide")
 # compact layout: the top-right toolbar floats over the page instead of taking a full-width band
 st.markdown("""<style>
 .js-plotly-plot path.point[style*="rgb(225, 29, 73)"] {stroke-dasharray: 5 4 !important;}
@@ -1847,7 +1847,7 @@ def pair_dialog(neg: str, pos: str):
 
 
 consume_waiting_clicks()                     # before any chart is drawn: see the function
-st.title("Hydrogen battery simulator")
+st.title("Rechargeable Battery AI Explorer")
 st.caption("Candidates come from thermodynamic data and physical laws; every result is compared with the "
            "lithium-ion packs in current cars (Tesla NMC/NCA, BYD Blade LFP).")
 
@@ -3019,12 +3019,6 @@ def pareto_front(xs, ys) -> list[int]:
 
 
 def comparison_chart():
-    st.markdown("#### Did anything beat lithium-ion? Every battery type on one chart")
-    st.caption("Each dot is one candidate sized as a whole battery for your settings (cells, catalyst, tanks, "
-               "electronics). Red stars are today's lithium-ion packs. Anything in the green zone is lighter "
-               "and cheaper than lithium-ion. The pale yellow line joins the best trade-offs: for each of them, no "
-               "other candidate is both lighter and cheaper (the frontier to push towards the green zone). Click a "
-               "dot to open it.")
     a1, a2, a0, a3 = st.columns([1, 1, 1.3, 2.2])
     default("trade_x", "Wh/kg")
     xk = a1.radio("Across", ["Wh/kg", "Wh/L"], key="trade_x", horizontal=True,
