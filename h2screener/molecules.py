@@ -57,7 +57,7 @@ REFERENCE_E0 = 0.6992         # V vs SHE, potential table (p-benzoquinone)
 VOLTAGE_BAND = 0.3            # V, stated uncertainty of the xTB voltages
 EV_TO_V_2E = 0.5              # eV per 2 electrons -> V
 MICHAEL = Chem.MolFromSmarts("[CH1;R]=[C;R]-[C;R](=O)")
-ALDEHYDE = Chem.MolFromSmarts("[CX3H1](=O)")
+ALDEHYDE = Chem.MolFromSmarts("[CX3H1](=O)[#6]")   # H-C(=O)-C only: formamides and formates (H-C(=O)-N, -O) are amides and esters
 
 # Instability alerts from the Brenk set (Brenk et al., ChemMedChem 3 (2008) 435;
 # shipped with RDKit): only the ones about decomposition or reactivity in water.
@@ -543,7 +543,11 @@ def score(r: MolResult, d: dict) -> None:
     r.wh_l = whl if whl > 0 else r.e0 * 2 * F * min(r.solubility_mol_l, 4.0) / 3600
     e_use = e_mean if whl > 0 else r.e0
     r.wh_kg = e_use * 2 * k * F / ((r.mw + 2.016 * k) / 1000) / 3600
-    r.objective = objective(r.e0, d) * (whl / max(objective(r.e0, d), 1e-9) if whl > 0 and objective(r.e0, d) > 0 else 1.0)
+    # objective() = Wh/L of the first step x penalties (price, Michael sites); the penalty
+    # factor is that over the plain Wh/L, and it applies to the multi-step Wh/L as well
+    base = r.e0 * 2 * F * min(d["sol"], 4.0) / 3600 if math.isfinite(r.e0) else 0.0
+    single = objective(r.e0, d)
+    r.objective = whl * (single / base) if whl > 0 and single > 0 and base > 0 else single
     if any("not reversible" in n for n in r.notes):
         r.objective *= 0.1
     if any("oxidised form tautomerises" in n for n in r.notes):
@@ -585,6 +589,20 @@ def with_dft(r: MolResult, v: float | None = None) -> MolResult:
     n.steps = [v] + list(r.steps[1:])
     n.e0 = v
     score(n, _descriptors_cached(r.smiles))
+    return n
+
+
+def rescore(r: MolResult) -> MolResult:
+    """The molecule re-scored with the current rules (scores in the library were
+    computed with the rules of the day they were computed; no xTB is rerun).
+    A stale 'aldehyde' note is dropped when the current pattern no longer matches."""
+    if not math.isfinite(r.e0) or not r.steps:
+        return r
+    from dataclasses import replace
+    d = _descriptors_cached(r.smiles)
+    notes = [n for n in r.notes if d["aldehyde"] or not n.startswith("aldehyde group")]
+    n = replace(r, notes=notes, forms=list(r.forms), steps=list(r.steps))
+    score(n, d)
     return n
 
 

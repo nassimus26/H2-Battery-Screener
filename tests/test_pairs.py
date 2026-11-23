@@ -155,3 +155,16 @@ def test_dft_voltage_replaces_the_first_step_and_rescores():
     back = M.xtb_version(d)
     assert back.steps == [0.70] and back.wh_l == pytest.approx(r.wh_l) and not back.xtb_steps
     assert M.with_dft(d, 0.5) is d              # never applied twice
+
+
+def test_formamide_is_not_an_aldehyde():
+    assert M.descriptors("O=CNC(=O)c1ccccc1")["aldehyde"] == 0      # formamide: an amide
+    assert M.descriptors("O=Cc1ccccc1")["aldehyde"] == 1            # benzaldehyde
+
+
+def test_price_penalty_survives_multi_step_scoring():
+    r = M.MolResult("O=C1C=CC(=O)C=C1", "Oc1ccc(O)cc1", 0.0, 0.70, steps=[0.70], forms=["Oc1ccc(O)cc1"])
+    d = dict(M.descriptors(r.smiles), usd_kg=1000.0)         # expensive to make
+    r.mw, r.solubility_mol_l = 108.1, d["sol"]
+    M.score(r, d)
+    assert r.objective < 0.6 * r.wh_l

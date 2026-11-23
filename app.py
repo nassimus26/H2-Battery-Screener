@@ -22,6 +22,48 @@ from plotly.subplots import make_subplots
 from h2screener import ai_search, gas_search, gases, design, discover, explain, options, pairs, rank, reference, runs, stackcost, synthesis, animation
 from h2screener import molecules as M
 
+
+def horizontal_axis_titles(fig):
+    """Move every y-axis title from the side (rotated, hard to read) to a
+    horizontal label just above its axis."""
+    try:
+        lay = fig.layout
+        names = [k for k in lay.to_plotly_json() if k.startswith("yaxis")]
+    except Exception:
+        return fig
+    moved = False
+    for name in names:
+        ax = lay[name]
+        text = ax.title.text if ax.title is not None else None
+        if not text or getattr(ax, "overlaying", None):
+            continue                                   # right-hand overlay axes keep their side title
+        suffix = name[5:]
+        xa = ax.anchor if ax.anchor and ax.anchor != "free" else "x" + suffix
+        fig.add_annotation(text=f"<b>{text}</b>" if "<b>" not in text else text, showarrow=False,
+                           xref=f"{xa} domain", yref=f"y{suffix} domain", x=0, y=1.0, xanchor="left",
+                           yanchor="bottom", yshift=6, font=dict(size=12))
+        ax.title.text = None
+        moved = True
+    if moved:
+        t = lay.margin.t if lay.margin and lay.margin.t is not None else None
+        fig.update_layout(margin=dict(t=max(t or 0, 70)))
+    return fig
+
+
+def _with_horizontal_titles(orig):
+    def plotly_chart(self, figure_or_data=None, *a, **k):
+        if hasattr(figure_or_data, "layout"):
+            horizontal_axis_titles(figure_or_data)
+        return orig(self, figure_or_data, *a, **k)
+    return plotly_chart
+
+
+from streamlit.delta_generator import DeltaGenerator as _DG   # noqa: E402
+if not getattr(_DG.plotly_chart, "_horizontal", False):
+    _DG.plotly_chart = _with_horizontal_titles(_DG.plotly_chart)
+    _DG.plotly_chart._horizontal = True
+st.plotly_chart = lambda *a, **k: _DG.plotly_chart(st._main, *a, **k)
+
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title="Hydrogen battery simulator", layout="wide")
 # compact layout: the top-right toolbar floats over the page instead of taking a full-width band
@@ -612,7 +654,7 @@ def dft_store() -> dict:
     """The molecule library as the page shows it: a molecule whose first hydrogen
     uptake was verified with DFT uses that voltage (M.with_dft); the AI search
     itself keeps working on xTB voltages so it compares like with like."""
-    return {s_: M.with_dft(r_) for s_, r_ in ai_search.load_store().items()}
+    return {s_: M.with_dft(M.rescore(r_)) for s_, r_ in ai_search.load_store().items()}
 
 
 @st.cache_data(show_spinner=False)
@@ -1258,7 +1300,7 @@ def live_progress(mode: str, kp: str):
         st.caption(f"{len(ctl.history)} generation(s) completed. This run started before progress tracking was "
                    "added; the next run shows the progress bar and time left.")
     if ctl.history:
-        unit = "Wh per litre of both liquids" if mode == "pair" else "Wh per litre of charged electrolyte"
+        unit = "Wh per litre of both liquids" if mode == "pair" else "Wh per litre of charged electrolyte (liquid only)"
         kind = "pair" if mode == "pair" else "molecule"
         fallback = None
         if any(not h.get("best_id") for h in ctl.history):     # runs from before best_id was recorded
@@ -1281,7 +1323,20 @@ def live_progress(mode: str, kp: str):
                 for m_ in (p_.neg.smiles, p_.pos.smiles):
                     val[m_] = max(val.get(m_, 0.0), p_.wh_l)
         else:
-            val = {k: (r.objective if math.isfinite(r.objective) else 0.0) for k, r in pool_.items()}
+            # the same quantity as the 'every molecule computed' chart below: Wh/L before penalties;
+            # the best-so-far line follows the best molecule that is usable (search score > 0)
+            val = {k: (r.wh_l if math.isfinite(r.wh_l) else 0.0) for k, r in pool_.items()}
+            usable_ = {k for k, r in pool_.items() if r.objective > 0 and not pairs._unstable(k)}
+            best_v, best_s, gx, gy, ids, keep = 0.0, None, [], [], [], []
+            for h in ctl.history:
+                for m_ in h.get("ids") or []:
+                    if m_ in usable_ and val[m_] > best_v:
+                        best_v, best_s = val[m_], m_
+                if best_s:
+                    keep.append(len(ids))
+                    ids.append([best_s])
+                    gx.append(h["generation"])
+                    gy.append(best_v)
         import random as _r
         _rg = _r.Random(0)
         ax_, ay_, ac_ = [], [], []
@@ -1296,7 +1351,9 @@ def live_progress(mode: str, kp: str):
                                    name=f"every molecule computed ({len(ac_)}, click to open)"
                                         + (" — value = its best pair" if mode == "pair" else ""),
                                    customdata=[[m_, m_] for m_ in ac_] if mode != "pair" else None,
-                                   hovertext=ac_, hovertemplate="generation %{x:.0f}<br>%{y:.0f}<br>%{hovertext}<extra></extra>"))
+                                   hovertext=ac_ if mode == "pair" else
+                                   [f"{m_}<br>search score {pool_[m_].objective:.0f} (after penalties)" for m_ in ac_],
+                                   hovertemplate="generation %{x:.0f}<br>%{y:.0f} Wh/L<br>%{hovertext}<extra></extra>"))
             if mode != "pair":
                 _nx = [i for i, m_ in enumerate(ac_) if pool_[m_].in_pubchem is False]
                 add_new_rings(f, [ax_[i] for i in _nx], [ay_[i] for i in _nx], [[ac_[i], ac_[i]] for i in _nx],
@@ -1333,7 +1390,8 @@ def best_so_far(mode: str, kp: str):
         label_ = top.smiles
         cfs = molecule_options(tkey(t), top.smiles)
         cf_ = min(cfs, key=lambda x: x.lcos_usd_kwh) if cfs else None
-        head = f"Best molecule so far: **{label_}**, {top.objective:.0f} Wh per litre of charged liquid (liquid only)"
+        head = (f"Best molecule so far (by search score {top.objective:.0f}): **{label_}**, {top.wh_l:.0f} Wh per litre "
+                f"of charged liquid (liquid only, before penalties)")
     tail = (f". As a whole battery (stack, tanks, pumps, electronics): **{cf_.wh_kg:.0f} Wh/kg, {cf_.wh_l:.0f} Wh/L, "
             f"${cf_.capex_usd_kwh:,.0f}/kWh** (Li-ion pack {LI['wh_kg']:.0f} Wh/kg, {LI['wh_l']:.0f} Wh/L)."
             if cf_ else ". It cannot be built as a whole battery with these settings.")
@@ -2908,7 +2966,10 @@ def molecule_h2_tab():
         mol["never reported"] = mol["new (not in PubChem)"]
         sc = px.scatter(mol, x="E V vs SHE", y="Wh/L electrolyte", color="status", symbol="never reported", custom_data=["molecule"],
                         size=mol["solubility M (ESOL)"].clip(0.05, 4), hover_data=["molecule", "notes"],
-                        title="Every molecule computed: voltage vs energy per litre of electrolyte (yellow ring = new molecule)")
+                        labels={"E V vs SHE": "voltage of the hydrogen uptake (V vs SHE): higher = more energy per molecule",
+                                "Wh/L electrolyte": "Wh per litre of charged liquid (liquid only, before penalties)"},
+                        title="Every molecule computed: voltage vs energy per litre (bigger dot = dissolves better; "
+                              "yellow ring = new molecule)")
         _nw = mol[mol["new (not in PubChem)"] == "yes"]
         add_new_rings(sc, _nw["E V vs SHE"], _nw["Wh/L electrolyte"], _nw[["molecule"]].values, size=24)
         sc.add_hline(y=LI["wh_l"], line_dash="dash", line_color="red",
